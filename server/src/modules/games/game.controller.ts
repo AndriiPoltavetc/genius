@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import type { AuthRequest } from '../../middleware/auth.middleware';
 import * as gameService from './game.service';
 
