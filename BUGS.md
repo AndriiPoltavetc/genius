@@ -233,3 +233,13 @@
 - **Рішення:** Додано `useEffect` що слідкує за `gameState.fen`. При зміні FEN: (1) ініціалізується `new Chess(fen)`, (2) перевіряється `chess.isCheckmate()` / `chess.isDraw()` / `chess.isCheck()`, (3) через `findKingSquare()` (ітерація `chess.board()`) знаходиться клітина короля під шахом, (4) встановлюється `checkSquare` для підсвічування червоним (`rgba(220, 38, 38, 0.7)`), (5) встановлюється `toast` — текстове повідомлення. Другий `useEffect` авто-приховує toast через 3 секунди (`setTimeout`). Першочерговий рендер (монтування) ігнорується через `prevFenRef` щоб не показувати хибний шах
 - **Як уникнути:** Критичні ігрові події (шах, мат, нічия) повинні мати явний візуальний feedback. `chess.js` надає всі необхідні методи (`isCheck`, `isCheckmate`, `isDraw`) — використовуй їх на клієнті для миттєвого UX без очікування серверної відповіді
 
+---
+
+### [2026-05-20] GitHub Actions деплоїв на Railway замість Render
+
+- **Контекст:** `.github/workflows/deploy.yml`
+- **Симптом:** CI/CD pipeline намагався деплоїти бекенд на Railway (`railway up --service genius-server`) замість Render. Деплой падав бо `RAILWAY_TOKEN` секрет не налаштований, а сервер деплоюється на Render
+- **Причина:** GitHub Actions workflow був згенерований з блоком `deploy-backend` для Railway. Render деплоїться автоматично через вебхук при push в `main` — окремий крок у GitHub Actions не потрібен
+- **Рішення:** Видалено повністю job `deploy-backend (Railway)` з `deploy.yml`. Залишено лише `deploy-frontend (Vercel)`. Видалено `needs: [deploy-backend]` з frontend job
+- **Як уникнути:** Перевіряти відповідність CI/CD конфігурації реальній платформі деплою ще до першого push. Render не потребує CLI-деплою з GitHub Actions — він підключається напряму до репозиторію
+

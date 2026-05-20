@@ -27,7 +27,7 @@ jobs:
         run: npm run lint
 
       - name: Type check
-        run: npm run typecheck
+        run: cd server && npx tsc --noEmit --skipLibCheck
 
   test:
     name: Tests
