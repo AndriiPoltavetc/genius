@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  rating       Int      @default(1200)
+  gamesPlayed  Int      @default(0)
+  gamesWon     Int      @default(0)
+  gamesLost    Int      @default(0)
+  gamesDrawn   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gamesAsWhite Game[]        @relation("WhitePlayer")
+  gamesAsBlack Game[]        @relation("BlackPlayer")
+  messages     ChatMessage[]
+
+  @@map("users")
+}
+
+model Game {
+  id                String       @id @default(uuid())
+  whitePlayerId     String?
+  blackPlayerId     String?
+  isAiGame          Boolean      @default(false)
+  aiLevel           AiLevel?
+  pgn               String       @db.Text
+  finalFen          String
+  result            GameResult
+  resultReason      ResultReason
+  whiteRatingBefore Int?
+  blackRatingBefore Int?
+  whiteRatingAfter  Int?
+  blackRatingAfter  Int?
+  timeControl       String       @default("600+0")
+  startedAt         DateTime     @default(now())
+  endedAt           DateTime?
+
+  whitePlayer User?         @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer User?         @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  moves       Move[]
+  messages    ChatMessage[]
+
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@index([startedAt])
+  @@map("games")
+}
+
+model Move {
+  id          String   @id @default(uuid())
+  gameId      String
+  moveNumber  Int
+  san         String
+  uci         String
+  fenAfter    String
+  timeSpentMs Int
+  createdAt   DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, moveNumber])
+  @@map("moves")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  gameId    String
+  userId    String
+  content   String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([gameId])
+  @@map("chat_messages")
+}
+
+enum AiLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum GameResult {
+  WHITE_WIN
+  BLACK_WIN
+  DRAW
+  ABORTED
+}
+
+enum ResultReason {
+  CHECKMATE
+  TIMEOUT
+  RESIGN
+  STALEMATE
+  DRAW_AGREED
+  INSUFFICIENT_MATERIAL
+  THREEFOLD_REPETITION
+  FIFTY_MOVE_RULE
+}

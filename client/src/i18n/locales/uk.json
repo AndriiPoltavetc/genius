@@ -1,0 +1,33 @@
+{
+  "home": {
+    "subtitle": "Грайте в шахи проти ШІ або реальних суперників у реальному часі",
+    "playNow": "Грати зараз",
+    "getStarted": "Почати",
+    "login": "Увійти",
+    "leaderboard": "Лідерборд",
+    "feature": {
+      "ai": "Шахова AI",
+      "aiDesc": "Minimax з Alpha-Beta відсіканням. Три рівні складності",
+      "realtime": "Real-time",
+      "realtimeDesc": "WebSocket з'єднання, синхронізація в реальному часі",
+      "elo": "Рейтинг ELO",
+      "eloDesc": "Класична система рейтингу. Починайте з 1200"
+    }
+  },
+  "auth": {
+    "loginTitle": "Вхід в Genius",
+    "registerTitle": "Реєстрація в Genius",
+    "email": "Email",
+    "password": "Пароль",
+    "username": "Нікнейм",
+    "login": "Увійти",
+    "register": "Зареєструватись",
+    "noAccount": "Немає акаунту?",
+    "hasAccount": "Вже є акаунт?",
+    "invalidCredentials": "Невірний email або пароль",
+    "registerError": "Помилка реєстрації. Можливо, такий email або нікнейм вже зайнятий"
+  },
+  "common": {
+    "loading": "Завантаження..."
+  }
+}

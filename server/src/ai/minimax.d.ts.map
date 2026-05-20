@@ -1,0 +1,1 @@
+{"version":3,"file":"minimax.d.ts","sourceRoot":"","sources":["minimax.ts"],"names":[],"mappings":"AAKA,MAAM,WAAW,aAAa;IAC5B,KAAK,EAAE,MAAM,CAAC;IACd,sDAAsD;IACtD,QAAQ,EAAE,MAAM,GAAG,IAAI,CAAC;IACxB,yDAAyD;IACzD,cAAc,EAAE,MAAM,CAAC;CACxB;AAwDD;;;;;GAKG;AACH,wBAAgB,YAAY,CAAC,GAAG,EAAE,MAAM,EAAE,KAAK,EAAE,MAAM,GAAG,aAAa,CAkCtE"}

@@ -1,0 +1,33 @@
+{
+  "home": {
+    "subtitle": "Play chess against AI or real opponents in real time",
+    "playNow": "Play Now",
+    "getStarted": "Get Started",
+    "login": "Login",
+    "leaderboard": "Leaderboard",
+    "feature": {
+      "ai": "Chess AI",
+      "aiDesc": "Minimax with Alpha-Beta pruning. Three difficulty levels",
+      "realtime": "Real-time",
+      "realtimeDesc": "WebSocket connection, real-time synchronization",
+      "elo": "ELO Rating",
+      "eloDesc": "Classic rating system. Start at 1200"
+    }
+  },
+  "auth": {
+    "loginTitle": "Login to Genius",
+    "registerTitle": "Register at Genius",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "login": "Login",
+    "register": "Register",
+    "noAccount": "No account?",
+    "hasAccount": "Already have an account?",
+    "invalidCredentials": "Invalid email or password",
+    "registerError": "Registration error. This email or username may already be taken"
+  },
+  "common": {
+    "loading": "Loading..."
+  }
+}
