@@ -243,3 +243,13 @@
 - **Рішення:** Видалено повністю job `deploy-backend (Railway)` з `deploy.yml`. Залишено лише `deploy-frontend (Vercel)`. Видалено `needs: [deploy-backend]` з frontend job
 - **Як уникнути:** Перевіряти відповідність CI/CD конфігурації реальній платформі деплою ще до першого push. Render не потребує CLI-деплою з GitHub Actions — він підключається напряму до репозиторію
 
+---
+
+### [2026-05-20] `Property 'headers'/'query' does not exist on type 'AuthRequest'` на Render
+
+- **Контекст:** `server/src/middleware/auth.middleware.ts:12`, `server/src/modules/games/game.controller.ts:17-18`
+- **Симптом:** Render збірка падала з помилками TypeScript: `Property 'headers' does not exist on type 'AuthRequest'` та `Property 'query' does not exist on type 'AuthRequest'`. Локально помилок не було
+- **Причина:** У `server/src/` були 32 застарілі `.d.ts` файли згенеровані попередньою збіркою коли `outDir` вказував на `.` (корінь) замість `./dist`. Коли `tsc` знаходить і `.ts` і `.d.ts` для одного модуля, він використовує `.d.ts` як декларацію. Стара `auth.middleware.d.ts` мала `AuthRequest extends Request` але з типом `Request` без повного набору властивостей (стара версія типів або неправильний контекст при генерації). В результаті `headers`, `query`, `body` були недоступні
+- **Рішення:** Видалено всі стале `.d.ts` файли з `server/src/` командою `del /s /q server/src/*.d.ts`. Поточний `tsconfig.json` має `outDir: "./dist"` та `rootDir: "./src"` — нові збірки більше не потраплятимуть у `src/`
+- **Як уникнути:** Якщо `outDir` змінюється — спочатку видаляти артефакти з попереднього місця. Додати `src/` до `.gitignore` патернів для `*.d.ts` та `*.js` щоб вони ніколи не потрапляли у репозиторій. Встановити `"declaration": false` у tsconfig якщо декларації не потрібні для публічного API
+

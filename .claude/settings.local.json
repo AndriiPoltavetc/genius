@@ -13,7 +13,10 @@
       "PowerShell(cmd /c \"dir D:\\\\genius\\\\node_modules\\\\react-chessboard\\\\dist\\\\chessboard\\\\media /a /s\" 2>&1)",
       "PowerShell(cmd /c \"type D:\\\\genius\\\\node_modules\\\\react-chessboard\\\\dist\\\\chessboard\\\\media\\\\pieces.d.ts\")",
       "PowerShell(Get-ChildItem \"D:\\\\genius\\\\client\\\\src\" -Recurse | Where-Object { $_.Extension -in '.js', '.d.ts', '.js.map', '.d.ts.map' -and $_.Name -ne 'vite-env.d.ts' } | Select-Object FullName)",
-      "PowerShell(cmd /c \"dir D:\\\\genius\\\\client\\\\src\\\\App.js /b /s 2>&1\")"
+      "PowerShell(cmd /c \"dir D:\\\\genius\\\\client\\\\src\\\\App.js /b /s 2>&1\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
