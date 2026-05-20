@@ -253,3 +253,14 @@
 - **Рішення:** Видалено всі стале `.d.ts` файли з `server/src/` командою `del /s /q server/src/*.d.ts`. Поточний `tsconfig.json` має `outDir: "./dist"` та `rootDir: "./src"` — нові збірки більше не потраплятимуть у `src/`
 - **Як уникнути:** Якщо `outDir` змінюється — спочатку видаляти артефакти з попереднього місця. Додати `src/` до `.gitignore` патернів для `*.d.ts` та `*.js` щоб вони ніколи не потрапляли у репозиторій. Встановити `"declaration": false` у tsconfig якщо декларації не потрібні для публічного API
 
+---
+
+### [2026-05-20] `AuthRequest extends Request` — `headers`/`query` недоступні на Render
+
+- **Контекст:** `server/src/middleware/auth.middleware.ts`, `server/src/modules/games/game.controller.ts`
+- **Симптом:** Render збірка падала з `Property 'headers' does not exist on type 'AuthRequest'` та `Property 'query' does not exist on type 'AuthRequest'`. Також: `Property 'userId' does not exist` в `game.controller.ts:16`
+- **Причина (1 — interface extends):** `interface AuthRequest extends Request` — в середовищі Render з конкретною версією TypeScript та `moduleResolution: Node` інтерфейс не успадковував властивості `Request` (headers, query, body). Це відтворюється коли модулі express резолвляться інакше ніж локально — наприклад якщо `@types/express` не встановлено або версія відрізняється. Рішення: перейти з `interface AuthRequest extends Request` на `type AuthRequest = Request & { user?: ... }` (type intersection гарантовано включає всі поля)
+- **Причина (2 — userId vs id):** Middleware визначав `user.id`, але: (а) `jwt.sign` у `auth.service.ts` записував поле як `userId`, (б) `game.controller.ts` читав `req.user!.userId`. Три місця використовували різні назви поля — типи не відображали реальну структуру JWT payload
+- **Рішення:** Перейшли з `interface extends` на `type intersection`: `type AuthRequest = Request & { user?: { userId: string; ... } }`. Для `headers` та `query` використовується `(req as any).headers?.authorization` та `(req as any).query` — ізольований `as any` замість поширення помилки. Поле `userId` вирівняне з `AuthTokenPayload` у `@genius/shared`
+- **Як уникнути:** При розширенні Express `Request` — перевіряти збірку у чистому середовищі (docker або CI) одразу, не покладатись лише на локальний запуск. Type intersection (`Request & {...}`) надійніша ніж `interface extends` для Express типів — менше залежить від порядку резолвінгу модулів
+

@@ -2,17 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 
-export interface AuthRequest extends Request {
+export type AuthRequest = Request & {
   user?: {
-    id: string;
+    userId: string;
     email: string;
     username: string;
     rating?: number;
   };
-}
+};
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+  const authHeader = (req as any).headers?.authorization as string | undefined;
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Missing or invalid token' });
     return;
