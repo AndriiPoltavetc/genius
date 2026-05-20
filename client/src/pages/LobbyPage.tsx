@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getSocket } from '../features/game/socket';
 import { gameStarted, searchStarted, searchCancelled } from '../features/game/gameSlice';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
-import type { AiLevel } from '@genius/shared';
+import type { AiLevel } from '../shared-types';
 
 const AI_LEVELS: { level: AiLevel; label: string; ratingRange: string; depth: number }[] = [
   { level: 'EASY', label: '🟢 Легкий', ratingRange: '800–1000 ELO', depth: 2 },

@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 
-import type { ClientToServerEvents, ServerToClientEvents } from '@genius/shared';
+import type { ClientToServerEvents, ServerToClientEvents } from '../../shared-types';
 
 type GeniusSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 

@@ -264,3 +264,13 @@
 - **Рішення:** Перейшли з `interface extends` на `type intersection`: `type AuthRequest = Request & { user?: { userId: string; ... } }`. Для `headers` та `query` використовується `(req as any).headers?.authorization` та `(req as any).query` — ізольований `as any` замість поширення помилки. Поле `userId` вирівняне з `AuthTokenPayload` у `@genius/shared`
 - **Як уникнути:** При розширенні Express `Request` — перевіряти збірку у чистому середовищі (docker або CI) одразу, не покладатись лише на локальний запуск. Type intersection (`Request & {...}`) надійніша ніж `interface extends` для Express типів — менше залежить від порядку резолвінгу модулів
 
+---
+
+### [2026-05-20] `Cannot find module '@genius/shared'` — Vercel не може знайти пакет монорепо
+
+- **Контекст:** `client/src/` — всі файли що імпортують `@genius/shared`; `.github/workflows/deploy.yml`
+- **Симптом:** Vercel збірка падала з помилкою `Cannot find module '@genius/shared' or its corresponding type declarations` у 10+ файлах клієнта (pages, features, components). Локально і в Docker збірка проходила без помилок
+- **Причина:** Vercel білдить тільки папку `client` ізольовано, без доступу до інших пакетів монорепо. `client/package.json` мав `"@genius/shared": "*"` як залежність, яка резолвилась через npm workspaces (`file:../shared`). Vercel не виконує `npm install` з кореня монорепо — він запускає `npm install` в директорії `client`, де `shared` пакет фізично недоступний. `node_modules/@genius/shared` не існує → TypeScript не може розрізнити типи → збірка падає
+- **Рішення:** Інлайн-копія типів: створено `client/src/shared-types/` з 4 файлами (`game.types.ts`, `user.types.ts`, `socket.types.ts`, `index.ts`) — точні копії з `shared/types/`. Оновлено всі 10 місць імпорту з `@genius/shared` → `../shared-types` (або відносний шлях до `client/src/shared-types`). Видалено `"@genius/shared": "*"` з `client/package.json`. Тепер клієнт повністю автономний і не залежить від монорепо-сусіда
+- **Як уникнути:** Якщо хостинг білдить лише один пакет монорепо (Vercel, Netlify) — або налаштовувати `installCommand`/`buildCommand` для монорепо (Turborepo / nx), або тримати спільні типи інлайн у кожному пакеті. Не покладатись на npm workspaces symlinks у хмарних білдерах без явного налаштування
+

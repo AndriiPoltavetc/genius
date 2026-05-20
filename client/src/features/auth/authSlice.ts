@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { UserPublic } from '@genius/shared';
+import type { UserPublic } from '../../shared-types';
 
 interface AuthState {
   user: UserPublic | null;

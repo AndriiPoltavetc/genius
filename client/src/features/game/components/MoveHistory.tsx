@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import type { Move } from '@genius/shared';
+import type { Move } from '../../../shared-types';
 
 interface MoveHistoryProps {
   moves: Move[];

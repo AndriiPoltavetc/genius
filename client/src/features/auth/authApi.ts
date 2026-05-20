@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-import type { AuthResponse, LoginRequest, RegisterRequest, UserPublic } from '@genius/shared';
+import type { AuthResponse, LoginRequest, RegisterRequest, UserPublic } from '../../shared-types';
 import type { RootState } from '../../app/store';
 
 export const authApi = createApi({

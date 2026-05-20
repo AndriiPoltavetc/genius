@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 import { getSocket } from '../socket';
-import type { ChatBroadcastPayload } from '@genius/shared';
+import type { ChatBroadcastPayload } from '../../../shared-types';
 
 interface ChatBoxProps {
   gameId: string;

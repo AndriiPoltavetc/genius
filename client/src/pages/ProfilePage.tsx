@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import type { UserPublic } from '@genius/shared';
+import type { UserPublic } from '../shared-types';
 
 export default function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();

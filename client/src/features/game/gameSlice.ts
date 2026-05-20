@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { GameState, GameResult, ResultReason } from '@genius/shared';
+import type { GameState, GameResult, ResultReason } from '../../shared-types';
 
 interface GameSliceState {
   currentGame: GameState | null;
