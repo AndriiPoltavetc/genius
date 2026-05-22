@@ -71,10 +71,10 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
       if (chess.isGameOver()) {
         const reason = getGameOverReason(chess);
-        const result =
-          chess.isCheckmate()
-            ? state.turn === 'w' ? 'BLACK_WIN' : 'WHITE_WIN' // current turn = loser after checkmate
-            : 'DRAW';
+        // chess.turn() is the side that CANNOT move — they are the loser in checkmate
+        const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = chess.isCheckmate()
+          ? chess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
+          : 'DRAW';
 
         const resolvedReason = reason ?? 'CHECKMATE';
         io.to(gameId).emit('move', {
@@ -115,7 +115,10 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
           if (updatedChess.isGameOver()) {
             const reason = getGameOverReason(updatedChess);
-            const result = updatedChess.isCheckmate() ? 'BLACK_WIN' : 'DRAW';
+            // chess.turn() after AI move is the side that cannot move — the loser in checkmate
+            const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = updatedChess.isCheckmate()
+              ? updatedChess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
+              : 'DRAW';
             const resolvedReason = reason ?? 'CHECKMATE';
             io.to(gameId).emit('move', {
               gameId,

@@ -7,10 +7,10 @@ import { gameStarted, searchStarted, searchCancelled } from '../features/game/ga
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import type { AiLevel } from '../shared-types';
 
-const AI_LEVELS: { level: AiLevel; label: string; ratingRange: string; depth: number }[] = [
-  { level: 'EASY', label: '🟢 Легкий', ratingRange: '800–1000 ELO', depth: 2 },
-  { level: 'MEDIUM', label: '🟡 Середній', ratingRange: '1200–1400 ELO', depth: 3 },
-  { level: 'HARD', label: '🔴 Важкий', ratingRange: '1500–1700 ELO', depth: 4 },
+const AI_LEVELS: { level: AiLevel; label: string; description: string; depth: number }[] = [
+  { level: 'EASY', label: '🟢 Легкий', description: 'Випадкові помилки', depth: 1 },
+  { level: 'MEDIUM', label: '🟡 Середній', description: 'Стандартний', depth: 2 },
+  { level: 'HARD', label: '🔴 Важкий', description: 'Сильний', depth: 3 },
 ];
 
 export default function LobbyPage() {
@@ -71,7 +71,7 @@ export default function LobbyPage() {
             Minimax + Alpha-Beta, три рівні складності. Не впливає на рейтинг.
           </p>
           <div className="space-y-2">
-            {AI_LEVELS.map(({ level, label, ratingRange, depth }) => (
+            {AI_LEVELS.map(({ level, label, description, depth }) => (
               <motion.button
                 key={level}
                 onClick={() => startAiGame(level)}
@@ -81,7 +81,7 @@ export default function LobbyPage() {
               >
                 <span>{label}</span>
                 <span className="text-gray-400 text-xs">
-                  {ratingRange} · глибина {depth}
+                  {description} · глибина {depth}
                 </span>
               </motion.button>
             ))}
