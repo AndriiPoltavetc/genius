@@ -15,7 +15,7 @@ type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<st
 const pendingDrawOffers = new Map<string, string>();
 
 export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): void {
-  const { userId, username } = socket.data;
+  const { userId } = socket.data;
 
   socket.on('startAiGame', async ({ level }) => {
     try {
@@ -132,7 +132,8 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
         if (aiMove) {
           const updatedState = await applyMove(gameId, aiMove.from, aiMove.to, aiMove.promotion ?? undefined);
-          const updatedChess = new Chess(updatedState.fen);
+          const updatedChess = new Chess();
+          updatedChess.loadPgn(updatedState.pgn);
 
           const aiMovePayload = {
             from: aiMove.from,
@@ -228,7 +229,6 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
     }
   });
 
-  void username; // used implicitly via socket.data
 }
 
 function buildGameState(
@@ -241,7 +241,15 @@ function buildGameState(
     fen: chess.fen(),
     pgn: chess.pgn(),
     turn: chess.turn() as 'w' | 'b',
-    moves: [] as [],
+    moves: chess.history({ verbose: true }).map((m, i) => ({
+      from: m.from,
+      to: m.to,
+      san: m.san,
+      uci: `${m.from}${m.to}${m.promotion ?? ''}`,
+      fenAfter: m.after,
+      moveNumber: i + 1,
+      timeSpentMs: 0,
+    })),
     isCheck: chess.inCheck(),
     isCheckmate: chess.isCheckmate(),
     isStalemate: chess.isStalemate(),

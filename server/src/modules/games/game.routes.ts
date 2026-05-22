@@ -6,4 +6,4 @@ import { getGameHandler, getHistoryHandler } from './game.controller';
 export const gameRoutes = Router();
 
 gameRoutes.get('/history', authMiddleware, getHistoryHandler);
-gameRoutes.get('/:gameId', getGameHandler);
+gameRoutes.get('/:gameId', authMiddleware, getGameHandler);

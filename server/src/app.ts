@@ -14,9 +14,14 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
+  const allowedOrigins =
+    env.NODE_ENV === 'production'
+      ? [env.CORS_ORIGIN]
+      : [env.CORS_ORIGIN, 'http://localhost:5173'];
+
   app.use(
     cors({
-      origin: [env.CORS_ORIGIN, 'http://localhost:5173'],
+      origin: allowedOrigins,
       credentials: true,
     }),
   );

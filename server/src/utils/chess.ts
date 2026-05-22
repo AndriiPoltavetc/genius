@@ -1,18 +1,6 @@
 import { Chess } from 'chess.js';
 
 /**
- * Safely parse a FEN string, returning null if invalid.
- */
-export function parseFen(fen: string): Chess | null {
-  try {
-    const chess = new Chess(fen);
-    return chess;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Determine the game result from the current position.
  * Returns null when the game is still in progress.
  *
@@ -40,7 +28,3 @@ export function getGameOverReason(
   return null;
 }
 
-/** Convert from-to to UCI notation (e.g. "e2e4", "e7e8q"). */
-export function toUci(from: string, to: string, promotion?: string): string {
-  return `${from}${to}${promotion ?? ''}`;
-}

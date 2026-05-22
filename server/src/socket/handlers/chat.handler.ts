@@ -14,6 +14,12 @@ export function registerChatHandlers(io: GeniusServer, socket: GeniusSocket): vo
     if (!content.trim() || content.length > 500) return;
 
     try {
+      const game = await prisma.game.findUnique({
+        where: { id: gameId },
+        select: { whitePlayerId: true, blackPlayerId: true },
+      });
+      if (!game || (game.whitePlayerId !== userId && game.blackPlayerId !== userId)) return;
+
       const message = await prisma.chatMessage.create({
         data: { gameId, userId, content: content.trim() },
       });
