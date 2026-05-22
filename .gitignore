@@ -40,10 +40,14 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Prisma
+# Prisma — compiled seed & generated migrations SQL
 server/prisma/migrations/*.sql
+server/prisma/seed.js
+server/prisma/seed.js.map
+server/prisma/seed.d.ts
+server/prisma/seed.d.ts.map
 
-# TypeScript
+# TypeScript incremental build info
 *.tsbuildinfo
 
 # Docker
@@ -52,3 +56,26 @@ server/prisma/migrations/*.sql
 # Temporary
 tmp/
 temp/
+
+# ─── Claude Code ──────────────────────────────────────────────────────────────
+# Claude settings, conversation history, reports, prompts, entire .claude folder
+.claude/
+BUGS.md
+
+# ─── Compiled JS/map artifacts (server source — tsup builds to dist/) ─────────
+server/src/**/*.js
+server/src/**/*.js.map
+server/src/**/*.d.ts
+server/src/**/*.d.ts.map
+
+# ─── Shared package compiled output ───────────────────────────────────────────
+shared/**/*.js
+shared/**/*.js.map
+shared/**/*.d.ts
+shared/**/*.d.ts.map
+
+# ─── Vite config compiled output in client root ───────────────────────────────
+client/vite.config.js
+client/vite.config.js.map
+client/vite.config.d.ts
+client/vite.config.d.ts.map
