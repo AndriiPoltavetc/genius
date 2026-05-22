@@ -25,7 +25,11 @@ export const authApi = createApi({
       query: () => '/auth/me',
       providesTags: ['User'],
     }),
+    getUserById: builder.query<UserPublic, string>({
+      query: (userId) => `/users/${userId}`,
+      providesTags: (result, error, id) => [{ type: 'User', id }],
+    }),
   }),
 });
 
-export const { useRegisterMutation, useLoginMutation, useMeQuery } = authApi;
+export const { useRegisterMutation, useLoginMutation, useMeQuery, useGetUserByIdQuery } = authApi;

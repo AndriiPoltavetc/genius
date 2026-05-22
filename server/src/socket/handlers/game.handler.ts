@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 import type { ServerToClientEvents, ClientToServerEvents, SocketData } from '@genius/shared';
 import { applyMove, getActiveGame, finalizeGame, createGame } from '../../modules/games/game.service';
 import { getBestMove } from '../../ai/aiService';
-import { getGameOverReason } from '../../utils/chess';
+import { getGameOverReason, determineResult } from '../../utils/chess';
 import { logger } from '../../utils/logger';
 import { startGameTimer, stopGameTimer } from '../gameTimerService';
 
@@ -82,12 +82,8 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       };
 
       if (chess.isGameOver()) {
-        const reason = getGameOverReason(chess);
-        const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = chess.isCheckmate()
-          ? chess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
-          : 'DRAW';
-
-        const resolvedReason = reason ?? 'CHECKMATE';
+        const result = determineResult(chess) ?? 'DRAW';
+        const resolvedReason = getGameOverReason(chess) ?? 'CHECKMATE';
         stopGameTimer(gameId);
         io.to(gameId).emit('move', {
           gameId,
@@ -126,11 +122,8 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
           };
 
           if (updatedChess.isGameOver()) {
-            const reason = getGameOverReason(updatedChess);
-            const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = updatedChess.isCheckmate()
-              ? updatedChess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
-              : 'DRAW';
-            const resolvedReason = reason ?? 'CHECKMATE';
+            const result = determineResult(updatedChess) ?? 'DRAW';
+            const resolvedReason = getGameOverReason(updatedChess) ?? 'CHECKMATE';
             stopGameTimer(gameId);
             io.to(gameId).emit('move', {
               gameId,
