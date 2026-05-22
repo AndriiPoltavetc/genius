@@ -149,6 +149,20 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
     }
   });
 
+  socket.on('timeout', async ({ gameId }) => {
+    try {
+      const game = await getActiveGame(gameId);
+      if (!game) return;
+
+      // The player who emits timeout is the winner (their opponent ran out of time)
+      const result = game.whitePlayerId === userId ? 'WHITE_WIN' : 'BLACK_WIN';
+      io.to(gameId).emit('gameEnd', { gameId, result, resultReason: 'TIMEOUT' });
+      await finalizeGame(gameId, result, 'TIMEOUT');
+    } catch (err) {
+      logger.error('timeout error', { err, userId });
+    }
+  });
+
   void username; // used implicitly via socket.data
 }
 

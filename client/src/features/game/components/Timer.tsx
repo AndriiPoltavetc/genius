@@ -48,7 +48,7 @@ export default function Timer({ initialMs, isActive, onTimeout }: TimerProps) {
 
   return (
     <motion.div
-      className={`font-mono text-3xl font-bold px-4 py-2 rounded-lg ${
+      className={`font-mono text-xl md:text-3xl font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-lg tabular-nums ${
         isLow ? 'bg-red-900 text-red-200' : 'bg-gray-800 text-white'
       }`}
       animate={isLow && isActive ? { scale: [1, 1.02, 1] } : {}}

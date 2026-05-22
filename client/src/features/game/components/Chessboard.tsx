@@ -30,6 +30,7 @@ export default function Chessboard({ gameId }: ChessboardProps) {
   const [checkSquare, setCheckSquare] = useState<Square | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const prevFenRef = useRef<string | null>(null);
+  const pendingPromoRef = useRef<{ from: Square; to: Square } | null>(null);
 
   const gameState = useAppSelector((s) => s.game.currentGame);
   const playerColor = useAppSelector((s) => s.game.playerColor);
@@ -72,12 +73,28 @@ export default function Chessboard({ gameId }: ChessboardProps) {
     return () => clearTimeout(id);
   }, [toast]);
 
+  const isPromotionMove = useCallback(
+    (from: Square, to: Square): boolean => {
+      if (!gameState) return false;
+      const chess = new Chess(gameState.fen);
+      const piece = chess.get(from);
+      if (!piece || piece.type !== 'p') return false;
+      return (piece.color === 'w' && to[1] === '8') || (piece.color === 'b' && to[1] === '1');
+    },
+    [gameState],
+  );
+
   const handleSquareClick = useCallback(
     (square: Square) => {
       if (!isMyTurn || !gameState) return;
 
       if (selectedSquare) {
-        getSocket().emit('move', { gameId, from: selectedSquare, to: square });
+        if (isPromotionMove(selectedSquare, square)) {
+          // Auto-promote to queen for click-to-move
+          getSocket().emit('move', { gameId, from: selectedSquare, to: square, promotion: 'q' });
+        } else {
+          getSocket().emit('move', { gameId, from: selectedSquare, to: square });
+        }
         setSelectedSquare(null);
         setMoveSquares({});
       } else {
@@ -94,18 +111,44 @@ export default function Chessboard({ gameId }: ChessboardProps) {
         setMoveSquares(highlights);
       }
     },
-    [isMyTurn, selectedSquare, gameId, gameState],
+    [isMyTurn, selectedSquare, gameId, gameState, isPromotionMove],
   );
 
   const handlePieceDrop = useCallback(
     (sourceSquare: Square, targetSquare: Square) => {
       if (!isMyTurn) return false;
+      if (isPromotionMove(sourceSquare, targetSquare)) {
+        // Store the pending move; react-chessboard will show the promotion dialog
+        pendingPromoRef.current = { from: sourceSquare, to: targetSquare };
+        setSelectedSquare(null);
+        setMoveSquares({});
+        return true;
+      }
       getSocket().emit('move', { gameId, from: sourceSquare, to: targetSquare });
       setSelectedSquare(null);
       setMoveSquares({});
       return true;
     },
-    [isMyTurn, gameId],
+    [isMyTurn, gameId, isPromotionMove],
+  );
+
+  const handlePromotionPieceSelect = useCallback(
+    (piece?: string, from?: Square, to?: Square): boolean => {
+      const pending = pendingPromoRef.current;
+      const sourceSquare = from ?? pending?.from;
+      const targetSquare = to ?? pending?.to;
+      pendingPromoRef.current = null;
+
+      if (!sourceSquare || !targetSquare) return false;
+
+      // piece format from react-chessboard: 'wQ', 'bN', etc.
+      const promotion = piece ? ((piece[1]?.toLowerCase() ?? 'q') as 'q' | 'r' | 'b' | 'n') : 'q';
+      getSocket().emit('move', { gameId, from: sourceSquare, to: targetSquare, promotion });
+      setSelectedSquare(null);
+      setMoveSquares({});
+      return true;
+    },
+    [gameId],
   );
 
   if (!gameState) return null;
@@ -115,13 +158,14 @@ export default function Chessboard({ gameId }: ChessboardProps) {
     : {};
 
   return (
-    <div style={{ position: 'relative', width: 'min(55vw, 600px)', aspectRatio: '1' }}>
+    <div style={{ position: 'relative', width: 'min(90vmin, 600px)', aspectRatio: '1' }}>
       <div style={{ width: '100%', height: '100%', colorScheme: 'light' }}>
         <ReactChessboard
           position={gameState.fen}
           boardOrientation={playerColor === 'b' ? 'black' : 'white'}
           onSquareClick={handleSquareClick}
           onPieceDrop={handlePieceDrop}
+          onPromotionPieceSelect={handlePromotionPieceSelect}
           arePiecesDraggable={isMyTurn}
           customSquareStyles={{
             ...checkStyles,

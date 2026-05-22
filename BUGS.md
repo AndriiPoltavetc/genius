@@ -274,3 +274,74 @@
 - **Рішення:** Інлайн-копія типів: створено `client/src/shared-types/` з 4 файлами (`game.types.ts`, `user.types.ts`, `socket.types.ts`, `index.ts`) — точні копії з `shared/types/`. Оновлено всі 10 місць імпорту з `@genius/shared` → `../shared-types` (або відносний шлях до `client/src/shared-types`). Видалено `"@genius/shared": "*"` з `client/package.json`. Тепер клієнт повністю автономний і не залежить від монорепо-сусіда
 - **Як уникнути:** Якщо хостинг білдить лише один пакет монорепо (Vercel, Netlify) — або налаштовувати `installCommand`/`buildCommand` для монорепо (Turborepo / nx), або тримати спільні типи інлайн у кожному пакеті. Не покладатись на npm workspaces symlinks у хмарних білдерах без явного налаштування
 
+---
+
+### [2026-05-22] Vercel 404 на всіх роутах крім кореневого
+
+- **Контекст:** `client/vercel.json` (відсутній), всі non-root маршрути (`/profile/...`, `/game/...`, `/lobby`)
+- **Симптом:** При відкритті будь-якого URL напряму або після F5 Vercel видає 404 Not Found. Навігація через React Router Links всередині додатку працює
+- **Причина:** Vercel (як і всі CDN/статичні хостинги) шукає файл відповідно до URL-шляху. `/profile/abc` → `dist/profile/abc/index.html` — такого файлу немає. SPA повинен перехопити всі шляхи і повернути `index.html`, але без rewrites правила Vercel цього не робить
+- **Рішення:** Створено `client/vercel.json` з `"rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]` — усі запити редиректяться на `index.html`, React Router підхоплює URL і рендерить правильний компонент
+- **Як уникнути:** При деплої будь-якого SPA (React, Vue, Angular) на Vercel/Netlify/S3 завжди налаштовувати rewrites/redirects одразу. Для Vercel — `vercel.json` у корені проєкту; для Netlify — `_redirects` файл
+
+---
+
+### [2026-05-22] Таймер ШІ досягає нуля але гра не завершується
+
+- **Контекст:** `client/src/pages/GamePage.tsx`, `client/src/features/game/components/Timer.tsx`, `server/src/socket/handlers/game.handler.ts`
+- **Симптом:** При грі проти ШІ таймер ШІ (чорних) рахує до 00:00 але гра не завершується — немає повідомлення про перемогу, можна продовжувати ходити
+- **Причина (1 — не підключений callback):** `Timer` компонент має `onTimeout?: () => void` проп, але в `GamePage.tsx` він не передавався для таймера суперника
+- **Причина (2 — відсутній серверний обробник):** `ClientToServerEvents` не мав події `timeout`. Навіть якби клієнт щось відправляв — сервер не мав обробника для фіналізації гри
+- **Рішення:** Додано `timeout` до `ClientToServerEvents` у `shared/types/socket.types.ts` та `client/src/shared-types/socket.types.ts`. На сервері в `game.handler.ts` додано обробник `socket.on('timeout', ...)` — визначає переможця на основі `whitePlayerId === userId` і завершує гру через `finalizeGame`. У `GamePage.tsx` таймер суперника отримує `onTimeout={gameState.isAiGame ? handleAiTimeout : undefined}`, де `handleAiTimeout` емітить `timeout` з `gameId`
+- **Як уникнути:** Таймер — це не просто візуальний елемент. Будь-який ігровий event що впливає на результат гри потребує серверного обробника. Завжди планувати серверну сторону timeout-логіки при проектуванні time-control
+
+---
+
+### [2026-05-22] Промоція пішака ігнорується — фігура вибирається але хід не відправляється правильно
+
+- **Контекст:** `client/src/features/game/components/Chessboard.tsx`
+- **Симптом:** При drag-and-drop пішака на останній ряд react-chessboard показує діалог вибору фігури, але після вибору хід не відправлявся на сервер з вказаним promotion piece
+- **Причина:** `onPieceDrop` одразу емітував `socket.emit('move', { gameId, from, to })` без `promotion`. Не було `onPromotionPieceSelect` callback — react-chessboard показував діалог, але результат вибору нікуди не передавався
+- **Рішення:** Додано `pendingPromoRef` для збереження `{from, to}` під час показу діалогу. `handlePieceDrop` перевіряє `isPromotionMove(from, to)` — якщо промоція, зберігає pending і повертає `true` (дозволяє діалог), але НЕ емітить хід. `handlePromotionPieceSelect(piece, from, to)` отримує вибрану фігуру (`'wQ'` → `'q'`) і емітить хід з `promotion`. Для click-to-move: автоматично ферзь (`promotion: 'q'`)
+- **Як уникнути:** Завжди перевіряти наявність `onPromotionPieceSelect` при використанні react-chessboard. `onPieceDrop` не повинен емітити move для промоцій — необхідно чекати вибору фігури
+
+---
+
+### [2026-05-22] Кнопка "Здатися" не активна під час ходу суперника
+
+- **Контекст:** `client/src/pages/GamePage.tsx`
+- **Симптом:** Гравець не міг здатись поки не настає його хід. Кнопка "Здатися" мала умову `disabled={!isMyTurn}` або аналогічну
+- **Причина:** Логіка UI обмежувала resign лише власним ходом — помилкове обмеження, у реальних шахах здатись можна будь-коли
+- **Рішення:** Кнопка "Здатися" завжди активна під час гри. Єдина умова — `disabled={gameState.isGameOver}` щоб заборонити після завершення. `isMyTurn` більше не впливає на доступність кнопки
+- **Як уникнути:** Resign — це волевиявлення гравця, не залежне від поточного ходу. Не прив'язувати UI resign до turn-логіки
+
+---
+
+### [2026-05-22] Краш при F5 на сторінці гри — `Socket not initialized`
+
+- **Контекст:** `client/src/pages/GamePage.tsx:30`, `client/src/features/game/socket.ts`
+- **Симптом:** При натисканні F5 під час гри застосунок падає з `Uncaught Error: Socket not initialized. Call initSocket() first.` і не перенаправляє на лобі
+- **Причина:** При оновленні сторінки Redux store порожній (немає `currentGame`). `useEffect` для socket listeners виконується до ефекту навігації, до ефекту ініціалізації сокету в `App.tsx`. `getSocket()` кидає помилку — компонент крашиться до того, як `navigate('/lobby')` встигає виконатись. React виконує ефекти дочірніх компонентів перед батьківськими — `GamePage` ефект запускається до `App.tsx` ефекту з `initSocket(token)`
+- **Рішення:** Socket listeners `useEffect` обгорнуто в `try/catch`: якщо `getSocket()` кидає помилку — ефект повертає `return` без реєстрації listeners. Паралельний ефект `if (!gameState) void navigate('/lobby')` виконається і перенаправить на лобі
+- **Як уникнути:** Будь-який виклик `getSocket()` за межами гарантовано ініціалізованого контексту — потенційний краш. Завжди обгортати в try/catch або перевіряти умови (наявність gameState, токену) перед реєстрацією socket listeners
+
+---
+
+### [2026-05-22] Помилка при завантаженні історії партій — відсутній error handling
+
+- **Контекст:** `client/src/pages/HistoryPage.tsx`
+- **Симптом:** При помилці мережі, 401/500 від API, або порожньому `data.games` — сторінка зависала на "Завантаження..." або крашилась з `Cannot read properties of undefined`
+- **Причина:** `fetch` не перевіряв `r.ok`, не було `.catch()`. `data.games` без `?? []` fallback — якщо API повертає `{ error: '...' }` замість `{ games: [] }`, виклик `data.games.map(...)` кидав TypeError
+- **Рішення:** Додано перевірку `if (!r.ok) throw new Error(...)`. Додано `.catch()` з `setError(...)`. Доданий стан `error: string | null` і відповідний fallback UI з червоним текстом. `data.games ?? []` захищає від undefined
+- **Як уникнути:** Кожен `fetch` у компоненті повинен мати `.catch()` або `try/catch`. Завжди відображати error state, а не лише loading/empty states. API може повернути помилку замість очікуваної структури
+
+---
+
+### [2026-05-22] Таймер виходить за межі екрану на мобільних пристроях
+
+- **Контекст:** `client/src/features/game/components/Timer.tsx`, `client/src/pages/GamePage.tsx`
+- **Симптом:** На мобільних пристроях (< 768px) таймер `text-3xl` (30px) разом з username не вміщується в рядок — виходить за межі блоку або переносить layout
+- **Причина:** Фіксований `text-3xl` та `px-4 py-2` не адаптуються до малих екранів. Layout `GamePage` не перемикався на вертикальний режим — sidebar `w-80` (320px) на мобільному залишав занадто мало місця для дошки
+- **Рішення:** `Timer.tsx`: `text-3xl` → `text-xl md:text-3xl`, padding `px-4 py-2` → `px-3 py-1.5 md:px-4 md:py-2`. Додано `tabular-nums` для стабільної ширини цифр. `GamePage.tsx`: головний контейнер `flex flex-col md:flex-row` — на мобільному вертикальний стек, на десктопі горизонтальний. Sidebar: `flex-col md:flex-row`, `border-t md:border-t-0 md:border-l`. Розмір дошки: `min(55vw, 600px)` → `min(90vmin, 600px)` — адаптується до орієнтації пристрою
+- **Як уникнути:** Всі ігрові UI компоненти мають використовувати Tailwind responsive prefixes (`sm:`, `md:`). Ніколи не задавати фіксований font-size без перевірки на мобільному viewport. `vmin` — корисна одиниця для квадратних елементів (шахова дошка)
+

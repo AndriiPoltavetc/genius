@@ -25,14 +25,23 @@ export default function HistoryPage() {
   const token = useAppSelector((s) => s.auth.accessToken);
   const [games, setGames] = useState<GameHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void fetch(`${import.meta.env['VITE_API_URL'] as string}/api/games/history`, {
       headers: { Authorization: `Bearer ${token ?? ''}` },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: { games: GameHistoryItem[] }) => {
-        setGames(data.games);
+        setGames(data.games ?? []);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        console.error('History fetch error:', err);
+        setError('Не вдалося завантажити історію партій.');
         setLoading(false);
       });
   }, [token]);
@@ -59,6 +68,11 @@ export default function HistoryPage() {
 
         {loading ? (
           <p className="text-gray-400">Завантаження...</p>
+        ) : error ? (
+          <div className="card text-center">
+            <p className="text-red-400 mb-3">{error}</p>
+            <Link to="/lobby" className="btn-primary inline-block">До лобі</Link>
+          </div>
         ) : games.length === 0 ? (
           <div className="card text-center">
             <p className="text-gray-400">Ви ще не зіграли жодної партії.</p>

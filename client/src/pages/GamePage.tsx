@@ -27,7 +27,13 @@ export default function GamePage() {
   }, [gameState, navigate]);
 
   useEffect(() => {
-    const socket = getSocket();
+    // Guard: socket may not be initialized if the user refreshed the page
+    let socket: ReturnType<typeof getSocket> | null = null;
+    try {
+      socket = getSocket();
+    } catch {
+      return;
+    }
 
     socket.on('move', ({ gameState: newState }) => {
       dispatch(moveMade(newState));
@@ -38,8 +44,8 @@ export default function GamePage() {
     });
 
     return () => {
-      socket.off('move');
-      socket.off('gameEnd');
+      socket?.off('move');
+      socket?.off('gameEnd');
     };
   }, [dispatch]);
 
@@ -58,8 +64,15 @@ export default function GamePage() {
     getSocket().emit('drawOffer');
   };
 
+  // When AI opponent's timer expires, the player wins by timeout
+  const handleAiTimeout = () => {
+    getSocket().emit('timeout', { gameId: gameState.id });
+  };
+
+  const boardMaxWidth = 'min(90vmin, 600px)';
+
   return (
-    <div className="h-screen bg-gray-950 flex overflow-hidden">
+    <div className="h-screen bg-gray-950 flex flex-col md:flex-row overflow-hidden">
       <ConfirmModal
         isOpen={showResignModal}
         title="Здатися?"
@@ -71,21 +84,31 @@ export default function GamePage() {
         variant="danger"
       />
 
-      {/* Left column — board (60%) */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 min-w-0">
+      {/* Board column */}
+      <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
         {/* Opponent info + timer */}
-        <div className="flex justify-between items-center bg-gray-900 rounded-lg p-3 w-full" style={{ maxWidth: 'min(55vw, 600px)' }}>
+        <div
+          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
+          style={{ maxWidth: boardMaxWidth }}
+        >
           <div>
             <p className="font-semibold text-white">{opponentUsername}</p>
             {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
           </div>
-          <Timer initialMs={oppTimeMs} isActive={!isMyTurn && !gameState.isGameOver} />
+          <Timer
+            initialMs={oppTimeMs}
+            isActive={!isMyTurn && !gameState.isGameOver}
+            onTimeout={gameState.isAiGame ? handleAiTimeout : undefined}
+          />
         </div>
 
         <Chessboard gameId={gameState.id} />
 
         {/* My info + timer */}
-        <div className="flex justify-between items-center bg-gray-900 rounded-lg p-3 w-full" style={{ maxWidth: 'min(55vw, 600px)' }}>
+        <div
+          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
+          style={{ maxWidth: boardMaxWidth }}
+        >
           <div>
             <p className="font-semibold text-white">{user?.username}</p>
             <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
@@ -94,18 +117,27 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* Right column — sidebar (40%) */}
-      <div className="w-80 flex flex-col gap-4 p-4 border-l border-gray-800 overflow-y-auto flex-shrink-0">
+      {/* Sidebar — resign/draw/history/chat */}
+      <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80">
         <MoveHistory moves={gameState.moves} />
 
         {!gameState.isAiGame && <ChatBox gameId={gameState.id} />}
 
+        {/* Resign available any time during an active game */}
         <div className="flex gap-2">
-          <button onClick={() => setShowResignModal(true)} className="btn-secondary flex-1 text-sm">
+          <button
+            onClick={() => setShowResignModal(true)}
+            disabled={gameState.isGameOver}
+            className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             Здатися
           </button>
           {!gameState.isAiGame && (
-            <button onClick={handleDrawOffer} className="btn-secondary flex-1 text-sm">
+            <button
+              onClick={handleDrawOffer}
+              disabled={gameState.isGameOver}
+              className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               Нічия
             </button>
           )}
