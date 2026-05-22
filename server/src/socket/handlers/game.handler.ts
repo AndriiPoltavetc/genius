@@ -6,6 +6,7 @@ import { applyMove, getActiveGame, finalizeGame, createGame } from '../../module
 import { getBestMove } from '../../ai/aiService';
 import { getGameOverReason } from '../../utils/chess';
 import { logger } from '../../utils/logger';
+import { startGameTimer, stopGameTimer } from '../gameTimerService';
 
 type GeniusSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -44,6 +45,8 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
           whitePlayerId: userId,
         },
       });
+
+      startGameTimer(io, state.gameId);
     } catch (err) {
       logger.error('startAiGame error', { err });
       socket.emit('error', { code: 'START_GAME_ERROR', message: 'Failed to start game' });
@@ -52,6 +55,15 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
   socket.on('move', async ({ gameId, from, to, promotion }) => {
     try {
+      // Security: validate it is this player's turn before doing anything
+      const activeGame = await getActiveGame(gameId);
+      if (!activeGame) return;
+
+      const isMyTurn =
+        (activeGame.turn === 'w' && activeGame.whitePlayerId === userId) ||
+        (activeGame.turn === 'b' && activeGame.blackPlayerId === userId);
+      if (!isMyTurn) return;
+
       const state = await applyMove(gameId, from, to, promotion);
       const chess = new Chess();
       chess.loadPgn(state.pgn);
@@ -71,12 +83,12 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
       if (chess.isGameOver()) {
         const reason = getGameOverReason(chess);
-        // chess.turn() is the side that CANNOT move — they are the loser in checkmate
         const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = chess.isCheckmate()
           ? chess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
           : 'DRAW';
 
         const resolvedReason = reason ?? 'CHECKMATE';
+        stopGameTimer(gameId);
         io.to(gameId).emit('move', {
           gameId,
           move: movePayload,
@@ -115,11 +127,11 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
           if (updatedChess.isGameOver()) {
             const reason = getGameOverReason(updatedChess);
-            // chess.turn() after AI move is the side that cannot move — the loser in checkmate
             const result: 'WHITE_WIN' | 'BLACK_WIN' | 'DRAW' = updatedChess.isCheckmate()
               ? updatedChess.turn() === 'w' ? 'BLACK_WIN' : 'WHITE_WIN'
               : 'DRAW';
             const resolvedReason = reason ?? 'CHECKMATE';
+            stopGameTimer(gameId);
             io.to(gameId).emit('move', {
               gameId,
               move: aiMovePayload,
@@ -148,24 +160,11 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       if (!game) return;
 
       const result = game.whitePlayerId === userId ? 'BLACK_WIN' : 'WHITE_WIN';
+      stopGameTimer(game.gameId);
       io.to(game.gameId).emit('gameEnd', { gameId: game.gameId, result, resultReason: 'RESIGN' });
       await finalizeGame(game.gameId, result, 'RESIGN');
     } catch (err) {
       logger.error('resign error', { err, userId });
-    }
-  });
-
-  socket.on('timeout', async ({ gameId }) => {
-    try {
-      const game = await getActiveGame(gameId);
-      if (!game) return;
-
-      // The player who emits timeout is the winner (their opponent ran out of time)
-      const result = game.whitePlayerId === userId ? 'WHITE_WIN' : 'BLACK_WIN';
-      io.to(gameId).emit('gameEnd', { gameId, result, resultReason: 'TIMEOUT' });
-      await finalizeGame(gameId, result, 'TIMEOUT');
-    } catch (err) {
-      logger.error('timeout error', { err, userId });
     }
   });
 
@@ -177,7 +176,6 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       if (!game || game.isAiGame) return;
 
       pendingDrawOffers.set(gameId, userId);
-      // Forward the offer to the opponent only
       socket.to(gameId).emit('drawOffer');
     } catch (err) {
       logger.error('drawOffer error', { err, userId });
@@ -194,6 +192,7 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
       pendingDrawOffers.delete(gameId);
       const result = 'DRAW' as const;
+      stopGameTimer(gameId);
       io.to(gameId).emit('gameEnd', { gameId, result, resultReason: 'DRAW_AGREED' });
       await finalizeGame(gameId, result, 'DRAW_AGREED');
     } catch (err) {
@@ -207,7 +206,6 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       if (!gameId) return;
 
       pendingDrawOffers.delete(gameId);
-      // Notify the player who made the offer
       socket.to(gameId).emit('drawDeclined');
     } catch (err) {
       logger.error('drawDecline error', { err, userId });

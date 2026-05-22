@@ -7,7 +7,6 @@ export interface ClientToServerEvents {
   startAiGame: (payload: { level: AiLevel }) => void;
   move: (payload: MovePayload) => void;
   resign: () => void;
-  timeout: (payload: { gameId: string }) => void;
   drawOffer: () => void;
   drawAccept: () => void;
   drawDecline: () => void;

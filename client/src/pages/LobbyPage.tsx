@@ -22,6 +22,7 @@ export default function LobbyPage() {
 
   const startAiGame = (level: AiLevel) => {
     const socket = getSocket();
+    socket.off('gameStart'); // prevent stale duplicate listeners
     socket.once('gameStart', (payload) => {
       dispatch(
         gameStarted({
@@ -37,6 +38,7 @@ export default function LobbyPage() {
 
   const searchGame = () => {
     const socket = getSocket();
+    socket.off('gameStart'); // prevent stale duplicate listeners
     dispatch(searchStarted());
     socket.emit('joinQueue');
 

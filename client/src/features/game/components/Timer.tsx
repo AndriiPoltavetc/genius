@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface TimerProps {
-  initialMs: number;
+  currentMs: number;
   isActive: boolean;
-  onTimeout?: () => void;
 }
 
 function formatTime(ms: number): string {
@@ -14,37 +12,8 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function Timer({ initialMs, isActive, onTimeout }: TimerProps) {
-  const [remainingMs, setRemainingMs] = useState(initialMs);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    setRemainingMs(initialMs);
-  }, [initialMs]);
-
-  useEffect(() => {
-    if (!isActive) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-
-    intervalRef.current = setInterval(() => {
-      setRemainingMs((prev) => {
-        if (prev <= 100) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          onTimeout?.();
-          return 0;
-        }
-        return prev - 100;
-      });
-    }, 100);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isActive, onTimeout]);
-
-  const isLow = remainingMs < 30_000;
+export default function Timer({ currentMs, isActive }: TimerProps) {
+  const isLow = currentMs < 30_000;
 
   return (
     <motion.div
@@ -54,7 +23,7 @@ export default function Timer({ initialMs, isActive, onTimeout }: TimerProps) {
       animate={isLow && isActive ? { scale: [1, 1.02, 1] } : {}}
       transition={{ repeat: Infinity, duration: 1 }}
     >
-      {formatTime(remainingMs)}
+      {formatTime(currentMs)}
     </motion.div>
   );
 }

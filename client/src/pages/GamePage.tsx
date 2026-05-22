@@ -24,6 +24,10 @@ export default function GamePage() {
   const [showDrawOfferModal, setShowDrawOfferModal] = useState(false);
   const [drawDeclinedToast, setDrawDeclinedToast] = useState(false);
 
+  // Server-authoritative timer values, updated via syncTime events
+  const [whiteMs, setWhiteMs] = useState(() => gameState?.whiteTimeMs ?? 600_000);
+  const [blackMs, setBlackMs] = useState(() => gameState?.blackTimeMs ?? 600_000);
+
   useEffect(() => {
     if (!gameState) void navigate('/lobby');
   }, [gameState, navigate]);
@@ -55,6 +59,11 @@ export default function GamePage() {
       dispatch(gameEnded({ result, resultReason, ratingDelta: ratingChange?.delta }));
     });
 
+    socket.on('syncTime', ({ whiteTimeMs, blackTimeMs }) => {
+      setWhiteMs(whiteTimeMs);
+      setBlackMs(blackTimeMs);
+    });
+
     socket.on('drawOffer', () => {
       setShowDrawOfferModal(true);
     });
@@ -67,6 +76,7 @@ export default function GamePage() {
     return () => {
       socket?.off('move');
       socket?.off('gameEnd');
+      socket?.off('syncTime');
       socket?.off('drawOffer');
       socket?.off('drawDeclined');
     };
@@ -75,8 +85,8 @@ export default function GamePage() {
   if (!gameState) return null;
 
   const isMyTurn = gameState.turn === playerColor;
-  const myTimeMs = playerColor === 'w' ? gameState.whiteTimeMs : gameState.blackTimeMs;
-  const oppTimeMs = playerColor === 'w' ? gameState.blackTimeMs : gameState.whiteTimeMs;
+  const myMs = playerColor === 'w' ? whiteMs : blackMs;
+  const oppMs = playerColor === 'w' ? blackMs : whiteMs;
 
   const handleResignConfirm = () => {
     setShowResignModal(false);
@@ -95,10 +105,6 @@ export default function GamePage() {
   const handleDrawDecline = () => {
     setShowDrawOfferModal(false);
     getSocket().emit('drawDecline');
-  };
-
-  const handleAiTimeout = () => {
-    getSocket().emit('timeout', { gameId: gameState.id });
   };
 
   const boardMaxWidth = 'min(90vmin, 600px)';
@@ -209,11 +215,7 @@ export default function GamePage() {
             <p className="font-semibold text-white">{opponentUsername}</p>
             {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
           </div>
-          <Timer
-            initialMs={oppTimeMs}
-            isActive={!isMyTurn && !gameState.isGameOver}
-            onTimeout={handleAiTimeout}
-          />
+          <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
         </div>
 
         <Chessboard gameId={gameState.id} />
@@ -227,7 +229,7 @@ export default function GamePage() {
             <p className="font-semibold text-white">{user?.username}</p>
             <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
           </div>
-          <Timer initialMs={myTimeMs} isActive={isMyTurn && !gameState.isGameOver} />
+          <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
         </div>
 
         {/* Resign button below board */}
@@ -273,7 +275,7 @@ export default function GamePage() {
             <p className="font-semibold text-white">{opponentUsername}</p>
             {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
           </div>
-          <Timer initialMs={oppTimeMs} isActive={!isMyTurn && !gameState.isGameOver} />
+          <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
         </div>
 
         <Chessboard gameId={gameState.id} />
@@ -286,7 +288,7 @@ export default function GamePage() {
             <p className="font-semibold text-white">{user?.username}</p>
             <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
           </div>
-          <Timer initialMs={myTimeMs} isActive={isMyTurn && !gameState.isGameOver} />
+          <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
         </div>
       </div>
 

@@ -5,9 +5,13 @@ import { addToQueue, removeFromQueue, findMatch } from '../../modules/matchmakin
 import { createGame } from '../../modules/games/game.service';
 import { logger } from '../../utils/logger';
 import { Chess } from 'chess.js';
+import { startGameTimer } from '../gameTimerService';
 
 type GeniusSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
+
+// Prevents the same pair from being matched twice due to a race condition
+const activePairings = new Set<string>();
 
 export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSocket): void {
   const { userId, username, rating } = socket.data;
@@ -21,6 +25,12 @@ export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSock
       if (!match) return;
 
       const [playerA, playerB] = match;
+
+      const pairKey = [playerA.userId, playerB.userId].sort().join(':');
+      if (activePairings.has(pairKey)) return;
+      activePairings.add(pairKey);
+      setTimeout(() => activePairings.delete(pairKey), 5000);
+
       // Randomly assign colors
       const [white, black] = Math.random() < 0.5 ? [playerA, playerB] : [playerB, playerA];
 
@@ -73,6 +83,8 @@ export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSock
           opponent: { id: white.userId, username: white.username, rating: white.rating },
         });
       }
+
+      startGameTimer(io, state.gameId);
     } catch (err) {
       logger.error('joinQueue error', { err, userId });
       socket.emit('error', { code: 'QUEUE_ERROR', message: 'Failed to join queue' });
