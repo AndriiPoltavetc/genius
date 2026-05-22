@@ -215,6 +215,8 @@ export default function GamePage() {
           botMs={oppMs}
           isBotActive={!isMyTurn && !gameState.isGameOver}
           isGameOver={gameState.isGameOver}
+          myName={user?.username}
+          myRating={user?.rating}
           onResign={() => setShowResignModal(true)}
           onTogglePanel={() => {
             if (showPanel && sidePanelTab === 'moves') { setShowPanel(false); }
@@ -228,18 +230,9 @@ export default function GamePage() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Board column */}
-          <div className="flex flex-col items-center justify-center flex-1 p-4 gap-2 min-w-0">
+          <div className="flex flex-col items-center justify-center flex-1 p-4 gap-3 min-w-0">
             <Chessboard gameId={gameState.id} />
-            <div
-              className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
-              style={{ maxWidth: boardMaxWidth }}
-            >
-              <div>
-                <p className="font-semibold text-white">{user?.username}</p>
-                <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
-              </div>
-              <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
-            </div>
+            <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
           </div>
 
           {/* Side panel with slide animation */}
@@ -263,10 +256,10 @@ export default function GamePage() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ONLINE GAME — board + sidebar
+  // ONLINE GAME — names header + board + sidebar
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="h-screen bg-gray-950 flex flex-col md:flex-row overflow-hidden">
+    <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
       {GameEndModal}
       {DrawOfferModal}
       {DrawDeclinedToast}
@@ -281,53 +274,54 @@ export default function GamePage() {
         variant="danger"
       />
 
-      {/* Board column */}
-      <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
-        <div
-          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
-          style={{ maxWidth: boardMaxWidth }}
-        >
-          <div>
-            <p className="font-semibold text-white">{opponentUsername}</p>
-            {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
-          </div>
-          <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
+      {/* Player names header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800 flex-shrink-0">
+        <div>
+          <p className="font-semibold text-white text-sm leading-tight">{opponentUsername}</p>
+          {opponentRating && <p className="text-xs text-gray-400">{opponentRating} ELO</p>}
         </div>
-
-        <Chessboard gameId={gameState.id} />
-
-        <div
-          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
-          style={{ maxWidth: boardMaxWidth }}
-        >
-          <div>
-            <p className="font-semibold text-white">{user?.username}</p>
-            <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
-          </div>
-          <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
+        <div className="text-right">
+          <p className="font-semibold text-white text-sm leading-tight">{user?.username}</p>
+          <p className="text-xs text-gray-400">{user?.rating} ELO</p>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80">
-        <MoveHistory moves={gameState.moves} />
-        <ChatBox gameId={gameState.id} />
+      {/* Board + sidebar */}
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        {/* Board column */}
+        <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
+          <div className="w-full flex justify-end" style={{ maxWidth: boardMaxWidth }}>
+            <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
+          </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowResignModal(true)}
-            disabled={gameState.isGameOver}
-            className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Здатися
-          </button>
-          <button
-            onClick={handleDrawOffer}
-            disabled={gameState.isGameOver}
-            className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Нічия
-          </button>
+          <Chessboard gameId={gameState.id} />
+
+          <div className="w-full flex justify-end" style={{ maxWidth: boardMaxWidth }}>
+            <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80">
+          <MoveHistory moves={gameState.moves} />
+          <ChatBox gameId={gameState.id} />
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowResignModal(true)}
+              disabled={gameState.isGameOver}
+              className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Здатися
+            </button>
+            <button
+              onClick={handleDrawOffer}
+              disabled={gameState.isGameOver}
+              className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Нічия
+            </button>
+          </div>
         </div>
       </div>
     </div>

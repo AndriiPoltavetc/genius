@@ -280,7 +280,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <Header title={isOwn ? 'Налаштування профілю' : 'Профіль'} />
+      <Header title={isOwn ? 'Налаштування профілю' : 'Профіль'} showBack />
       {isOwn
         ? <OwnSettingsView />
         : <PublicProfileView userId={userId ?? ''} />}

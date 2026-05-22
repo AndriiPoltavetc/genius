@@ -239,7 +239,7 @@ export default function LobbyPage() {
                   ] as const).map(({ label, stats }) => (
                     <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
                       <p className="text-xs text-gray-400">{label}</p>
-                      <p className="text-sm font-bold text-white">{stats.played} ігор</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{stats.played} ігор</p>
                       <p className="text-xs text-gray-500">{stats.wins} пер.</p>
                     </div>
                   ))}
@@ -263,9 +263,9 @@ export default function LobbyPage() {
               </Link>
               <Link
                 to={`/profile/${user?.id ?? ''}`}
-                className="text-gray-500 hover:text-gray-400 text-sm"
+                className="text-primary-400 hover:underline text-sm font-medium"
               >
-                Налаштування профілю
+                ⚙️ Налаштування
               </Link>
             </div>
           </div>

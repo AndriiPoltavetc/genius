@@ -19,7 +19,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      <Header title="Лідерборд" />
+      <Header title="Лідерборд" showBack />
       <div className="flex-1 px-4 py-8">
       <div className="max-w-3xl mx-auto">
 

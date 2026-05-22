@@ -22,12 +22,14 @@
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --text-primary: #f1f5f9;
+  --text-secondary: #9ca3af;
 }
 
 [data-theme="light"] {
   --bg-primary: #f8fafc;
   --bg-secondary: #e2e8f0;
   --text-primary: #0f172a;
+  --text-secondary: #6b7280;
   color-scheme: light;
 }
 
@@ -47,6 +49,7 @@
   --bg-primary: #f0d9b5;
   --bg-secondary: #b58863;
   --text-primary: #2d1b00;
+  --text-secondary: #8b6914;
   color-scheme: light;
 }
 
@@ -65,13 +68,19 @@
 /* ── Button theme overrides ─────────────────────────────────────────────── */
 [data-theme="light"] .btn-primary  { background-color: #2563eb !important; color: #ffffff !important; }
 [data-theme="light"] .btn-primary:hover { background-color: #1d4ed8 !important; }
-[data-theme="light"] .btn-secondary { background-color: #e2e8f0 !important; color: #1e293b !important; }
-[data-theme="light"] .btn-secondary:hover { background-color: #cbd5e1 !important; }
+[data-theme="light"] .btn-secondary { background-color: #e2e8f0 !important; color: #1e293b !important; border: 2px solid rgba(30,41,59,0.2) !important; }
+[data-theme="light"] .btn-secondary:hover { background-color: #cbd5e1 !important; border-color: rgba(30,41,59,0.5) !important; }
+[data-theme="light"] .bg-gray-700  { background-color: #d1d5db !important; }
+[data-theme="light"] .hover\:bg-gray-600:hover { background-color: #b8bec8 !important; }
+[data-theme="light"] .text-gray-500 { color: #64748b !important; }
 
 [data-theme="classic"] .btn-primary  { background-color: #4a7c59 !important; color: #ffffff !important; }
 [data-theme="classic"] .btn-primary:hover { background-color: #3d6b4a !important; }
-[data-theme="classic"] .btn-secondary { background-color: #c8a87a !important; color: #2d1b00 !important; }
-[data-theme="classic"] .btn-secondary:hover { background-color: #b89060 !important; }
+[data-theme="classic"] .btn-secondary { background-color: #c8a87a !important; color: #2d1b00 !important; border: 2px solid rgba(45,27,0,0.2) !important; }
+[data-theme="classic"] .btn-secondary:hover { background-color: #b89060 !important; border-color: rgba(45,27,0,0.5) !important; }
+[data-theme="classic"] .bg-gray-700  { background-color: #b89060 !important; }
+[data-theme="classic"] .hover\:bg-gray-600:hover { background-color: #a07848 !important; }
+[data-theme="classic"] .text-gray-500 { color: #7a5c2e !important; }
 
 @layer components {
   .btn-primary {
