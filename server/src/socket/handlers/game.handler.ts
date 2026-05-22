@@ -105,10 +105,33 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       if (state.isAiGame && state.turn === 'b' && state.aiLevel) {
         const aiResult = await getBestMove(chess.fen(), state.aiLevel);
 
-        const aiFen = new Chess(chess.fen());
-        const aiMove = aiFen.move(aiResult.move);
+        const currentFen = chess.fen();
+        logger.info('Applying AI move', {
+          move: aiResult.move,
+          fen: currentFen,
+          legalMoves: new Chess(currentFen).moves(),
+        });
+
+        const aiFen = new Chess(currentFen);
+        // Try SAN first (normal path from minimax); fall back to UCI ("e2e4", "e7e8q")
+        let aiMove = aiFen.move(aiResult.move);
+        if (!aiMove && aiResult.move.length >= 4) {
+          aiMove = aiFen.move({
+            from: aiResult.move.slice(0, 2) as import('chess.js').Square,
+            to: aiResult.move.slice(2, 4) as import('chess.js').Square,
+            promotion: (aiResult.move[4] as 'q' | 'r' | 'b' | 'n') || undefined,
+          });
+        }
+
+        if (!aiMove) {
+          logger.error('AI move could not be applied in either SAN or UCI format', {
+            move: aiResult.move,
+            fen: currentFen,
+          });
+        }
+
         if (aiMove) {
-          const updatedState = await applyMove(gameId, aiMove.from, aiMove.to, aiMove.promotion);
+          const updatedState = await applyMove(gameId, aiMove.from, aiMove.to, aiMove.promotion ?? undefined);
           const updatedChess = new Chess(updatedState.fen);
 
           const aiMovePayload = {

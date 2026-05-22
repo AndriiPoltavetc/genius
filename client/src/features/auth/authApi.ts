@@ -27,7 +27,7 @@ export const authApi = createApi({
     }),
     getUserById: builder.query<UserPublic, string>({
       query: (userId) => `/users/${userId}`,
-      providesTags: (result, error, id) => [{ type: 'User', id }],
+      providesTags: (_result, _error, id) => [{ type: 'User', id }],
     }),
   }),
 });
