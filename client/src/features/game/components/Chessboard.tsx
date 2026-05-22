@@ -76,6 +76,41 @@ function findKingSquare(chess: Chess, color: 'w' | 'b'): Square | null {
   return null;
 }
 
+function computeHighlights(square: Square, fen: string, theme: string): SquareStyles {
+  const chess = new Chess(fen);
+  const moves = chess.moves({ square, verbose: true });
+  const highlights: SquareStyles = {};
+
+  const normalGradient =
+    theme === 'light'
+      ? 'radial-gradient(circle, rgba(180,0,0,0.5) 25%, transparent 25%)'
+      : theme === 'classic'
+      ? 'radial-gradient(circle, rgba(0,80,0,0.6) 25%, transparent 25%)'
+      : 'radial-gradient(circle, rgba(80,80,80,0.7) 25%, transparent 25%)';
+
+  const captureOutlineColor =
+    theme === 'light' ? 'rgba(180,0,0,0.8)'
+    : theme === 'classic' ? 'rgba(0,100,0,0.8)'
+    : 'rgba(120,120,120,0.9)';
+
+  moves.forEach((m) => {
+    const isCapture = m.flags.includes('c') || m.flags.includes('e');
+    const isCastle = m.flags.includes('k') || m.flags.includes('q');
+    if (isCastle) {
+      highlights[m.to] = {
+        backgroundColor: 'rgba(0,150,255,0.25)',
+        outline: '2px dashed rgba(0,150,255,0.8)',
+        outlineOffset: '-2px',
+      };
+    } else if (isCapture) {
+      highlights[m.to] = { outline: `3px solid ${captureOutlineColor}`, outlineOffset: '-3px' };
+    } else {
+      highlights[m.to] = { background: normalGradient };
+    }
+  });
+  return highlights;
+}
+
 export default function Chessboard({ gameId }: ChessboardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [moveSquares, setMoveSquares] = useState<SquareStyles>({});
@@ -110,6 +145,12 @@ export default function Chessboard({ gameId }: ChessboardProps) {
   const gameState = useAppSelector((s) => s.game.currentGame);
   const playerColor = useAppSelector((s) => s.game.playerColor);
   const isMyTurn = gameState?.turn === playerColor;
+
+  // Recalculate move highlights when theme changes while a square is selected
+  useEffect(() => {
+    if (!selectedSquare || !gameState) return;
+    setMoveSquares(computeHighlights(selectedSquare, gameState.fen, currentTheme));
+  }, [currentTheme, selectedSquare, gameState?.fen]);
 
   useEffect(() => {
     if (!gameState) return;
@@ -181,34 +222,7 @@ export default function Chessboard({ gameId }: ChessboardProps) {
         }
       } else {
         setSelectedSquare(square);
-        const chess = new Chess(gameState.fen);
-        const moves = chess.moves({ square, verbose: true });
-        const highlights: SquareStyles = {};
-
-        const normalGradient =
-          currentTheme === 'light'
-            ? 'radial-gradient(circle, rgba(180,0,0,0.5) 25%, transparent 25%)'
-            : currentTheme === 'classic'
-            ? 'radial-gradient(circle, rgba(0,80,0,0.6) 25%, transparent 25%)'
-            : 'radial-gradient(circle, rgba(80,80,80,0.7) 25%, transparent 25%)';
-
-        const captureOutlineColor =
-          currentTheme === 'light' ? 'rgba(180,0,0,0.8)'
-          : currentTheme === 'classic' ? 'rgba(0,100,0,0.8)'
-          : 'rgba(120,120,120,0.9)';
-
-        moves.forEach((m) => {
-          const isCapture = m.flags.includes('c') || m.flags.includes('e');
-          const isCastle = m.flags.includes('k') || m.flags.includes('q');
-          if (isCastle) {
-            highlights[m.to] = { backgroundColor: 'rgba(0, 100, 200, 0.4)' };
-          } else if (isCapture) {
-            highlights[m.to] = { outline: `3px solid ${captureOutlineColor}`, outlineOffset: '-3px' };
-          } else {
-            highlights[m.to] = { background: normalGradient };
-          }
-        });
-        setMoveSquares(highlights);
+        setMoveSquares(computeHighlights(square, gameState.fen, currentTheme));
       }
     },
     [isMyTurn, selectedSquare, gameId, gameState, isPromotionMove, currentTheme],
@@ -259,6 +273,12 @@ export default function Chessboard({ gameId }: ChessboardProps) {
     pieceStyle === 'classic' ? PIECE_SETS.classic :
     undefined;
 
+  // Theme-reactive promotion dialog colors
+  const promoBg = currentTheme === 'light' ? '#e2e8f0' : currentTheme === 'classic' ? '#d4b896' : '#1e293b';
+  const promoBtnBg = currentTheme === 'light' ? '#cbd5e1' : currentTheme === 'classic' ? '#c9a87a' : '#334155';
+  const promoBtnBorder = currentTheme === 'light' ? '#94a3b8' : currentTheme === 'classic' ? '#a07848' : '#475569';
+  const promoText = currentTheme === 'light' ? '#475569' : currentTheme === 'classic' ? '#6b4c2a' : '#94a3b8';
+
   return (
     <div style={{ position: 'relative', width: 'min(90vmin, 600px)', aspectRatio: '1' }}>
       <div style={{ width: '100%', height: '100%', colorScheme: 'light' }}>
@@ -301,13 +321,13 @@ export default function Chessboard({ gameId }: ChessboardProps) {
         >
           <div
             style={{
-              backgroundColor: '#1e293b', borderRadius: '12px',
+              backgroundColor: promoBg, borderRadius: '12px',
               padding: '16px 20px', display: 'flex', flexDirection: 'column',
               gap: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', margin: 0 }}>
+            <p style={{ color: promoText, fontSize: '13px', textAlign: 'center', margin: 0 }}>
               Обери фігуру
             </p>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -318,8 +338,9 @@ export default function Chessboard({ gameId }: ChessboardProps) {
                   onClick={() => emitPromotion(pendingPromoMove.from, pendingPromoMove.to, piece)}
                   style={{
                     width: '56px', height: '56px', fontSize: '32px',
-                    backgroundColor: '#334155', border: '2px solid #475569',
-                    borderRadius: '8px', cursor: 'pointer', color: '#fff',
+                    backgroundColor: promoBtnBg, border: `2px solid ${promoBtnBorder}`,
+                    borderRadius: '8px', cursor: 'pointer',
+                    color: currentTheme === 'light' ? '#1e293b' : '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'background-color 0.15s',
                   }}
@@ -328,8 +349,8 @@ export default function Chessboard({ gameId }: ChessboardProps) {
                     (e.currentTarget as HTMLButtonElement).style.borderColor = '#38bdf8';
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#334155';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#475569';
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = promoBtnBg;
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = promoBtnBorder;
                   }}
                 >
                   {playerColor === 'b' ? blackSymbol : whiteSymbol}

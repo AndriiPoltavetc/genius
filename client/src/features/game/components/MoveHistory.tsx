@@ -2,6 +2,30 @@ import { useEffect, useRef } from 'react';
 
 import type { Move } from '../../../shared-types';
 
+const PIECE_ICONS = {
+  w: { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' },
+  b: { p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚' },
+};
+
+function getMoveDisplay(move: Move): string {
+  const color = move.moveNumber % 2 === 1 ? 'w' : 'b';
+  const icons = PIECE_ICONS[color];
+  let piece: keyof typeof icons = 'p';
+  const san = move.san;
+  if (san.startsWith('K') || san.startsWith('O')) piece = 'k';
+  else if (san.startsWith('Q')) piece = 'q';
+  else if (san.startsWith('R')) piece = 'r';
+  else if (san.startsWith('B')) piece = 'b';
+  else if (san.startsWith('N')) piece = 'n';
+  const icon = icons[piece];
+  if (san === 'O-O') return `${icon} O-O`;
+  if (san === 'O-O-O') return `${icon} O-O-O`;
+  const separator = san.includes('x') ? '×' : '→';
+  const promoMatch = san.match(/=([QRBN])/);
+  const suffix = promoMatch ? (icons[promoMatch[1].toLowerCase() as keyof typeof icons] ?? '') : '';
+  return `${icon} ${move.from}${separator}${move.to}${suffix}`;
+}
+
 interface MoveHistoryProps {
   moves: Move[];
 }
@@ -26,8 +50,8 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
           {movePairs.map(([whiteMove, blackMove], i) => (
             <tr key={i} className="hover:bg-gray-800 rounded">
               <td className="text-gray-500 w-8 pr-2 text-right">{i + 1}.</td>
-              <td className="text-white px-2 py-0.5">{whiteMove.san}</td>
-              <td className="text-white px-2 py-0.5">{blackMove?.san ?? ''}</td>
+              <td className="text-white px-2 py-0.5">{getMoveDisplay(whiteMove)}</td>
+              <td className="text-white px-2 py-0.5">{blackMove ? getMoveDisplay(blackMove) : ''}</td>
             </tr>
           ))}
         </tbody>

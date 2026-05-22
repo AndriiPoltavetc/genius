@@ -81,6 +81,7 @@
 [data-theme="classic"] .bg-gray-700  { background-color: #b89060 !important; }
 [data-theme="classic"] .hover\:bg-gray-600:hover { background-color: #a07848 !important; }
 [data-theme="classic"] .text-gray-500 { color: #7a5c2e !important; }
+[data-theme="classic"] .bg-primary-500 { background-color: #4a7c59 !important; }
 
 @layer components {
   .btn-primary {

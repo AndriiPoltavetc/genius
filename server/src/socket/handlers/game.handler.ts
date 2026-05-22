@@ -7,6 +7,7 @@ import { getBestMove } from '../../ai/aiService';
 import { getGameOverReason, determineResult } from '../../utils/chess';
 import { logger } from '../../utils/logger';
 import { startGameTimer, stopGameTimer } from '../gameTimerService';
+import { pendingGameReady } from '../gameReadyStore';
 
 type GeniusSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -17,9 +18,14 @@ const pendingDrawOffers = new Map<string, string>();
 export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): void {
   const { userId } = socket.data;
 
-  socket.on('startAiGame', async ({ level }) => {
+  socket.on('startAiGame', async ({ level, timeLimitSeconds }) => {
     try {
-      const state = await createGame(userId, undefined, true, level);
+      const timeLimitMs = timeLimitSeconds === 0
+        ? 99999 * 60 * 1000
+        : timeLimitSeconds != null
+        ? timeLimitSeconds * 1000
+        : undefined;
+      const state = await createGame(userId, undefined, true, level, timeLimitMs);
       await socket.join(state.gameId);
       socket.data.currentGameId = state.gameId;
 
@@ -236,6 +242,15 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       socket.to(gameId).emit('drawDeclined');
     } catch (err) {
       logger.error('drawDecline error', { err, userId });
+    }
+  });
+
+  socket.on('gameReady', ({ gameId }) => {
+    const key = `${gameId}:${userId}`;
+    const pending = pendingGameReady.get(key);
+    if (pending) {
+      clearTimeout(pending.timer);
+      pendingGameReady.delete(key);
     }
   });
 

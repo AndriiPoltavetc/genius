@@ -28,8 +28,10 @@ export async function createGame(
   blackPlayerId: string | undefined,
   isAiGame: boolean,
   aiLevel?: AiLevel,
+  timeLimitMs?: number,
 ): Promise<ActiveGameState> {
   const chess = new Chess();
+  const timeMs = timeLimitMs ?? INITIAL_TIME_MS;
 
   const game = await prisma.game.create({
     data: {
@@ -50,8 +52,8 @@ export async function createGame(
     pgn: chess.pgn(),
     whitePlayerId,
     isAiGame,
-    whiteTimeMs: INITIAL_TIME_MS,
-    blackTimeMs: INITIAL_TIME_MS,
+    whiteTimeMs: timeMs,
+    blackTimeMs: timeMs,
     lastMoveAt: Date.now(),
     turn: 'w',
     ...(blackPlayerId !== undefined ? { blackPlayerId } : {}),

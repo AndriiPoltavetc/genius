@@ -6,6 +6,7 @@ import { createGame } from '../../modules/games/game.service';
 import { logger } from '../../utils/logger';
 import { Chess } from 'chess.js';
 import { startGameTimer } from '../gameTimerService';
+import { pendingGameReady } from '../gameReadyStore';
 
 type GeniusSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -79,23 +80,37 @@ export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSock
       if (whiteSocket) {
         await whiteSocket.join(state.gameId);
         whiteSocket.data.currentGameId = state.gameId;
-        whiteSocket.emit('gameStart', {
+        const whitePayload = {
           gameId: state.gameId,
-          playerColor: 'w',
+          playerColor: 'w' as const,
           gameState: gameStateBase,
           opponent: { id: black.userId, username: black.username, rating: black.rating },
-        });
+        };
+        whiteSocket.emit('gameStart', whitePayload);
+        const whiteKey = `${state.gameId}:${white.userId}`;
+        const whiteTimer = setTimeout(() => {
+          whiteSocket.emit('gameStart', whitePayload);
+          pendingGameReady.delete(whiteKey);
+        }, 4000);
+        pendingGameReady.set(whiteKey, { timer: whiteTimer, emit: () => whiteSocket.emit('gameStart', whitePayload) });
       }
 
       if (blackSocket) {
         await blackSocket.join(state.gameId);
         blackSocket.data.currentGameId = state.gameId;
-        blackSocket.emit('gameStart', {
+        const blackPayload = {
           gameId: state.gameId,
-          playerColor: 'b',
+          playerColor: 'b' as const,
           gameState: gameStateBase,
           opponent: { id: white.userId, username: white.username, rating: white.rating },
-        });
+        };
+        blackSocket.emit('gameStart', blackPayload);
+        const blackKey = `${state.gameId}:${black.userId}`;
+        const blackTimer = setTimeout(() => {
+          blackSocket.emit('gameStart', blackPayload);
+          pendingGameReady.delete(blackKey);
+        }, 4000);
+        pendingGameReady.set(blackKey, { timer: blackTimer, emit: () => blackSocket.emit('gameStart', blackPayload) });
       }
 
       startGameTimer(io, state.gameId);

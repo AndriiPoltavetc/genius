@@ -4,7 +4,8 @@ import type { AiLevel, GameState, GameResult, ResultReason, Move } from './game.
 export interface ClientToServerEvents {
   joinQueue: (payload?: { colorPreference?: 'white' | 'black' | 'any' }) => void;
   leaveQueue: () => void;
-  startAiGame: (payload: { level: AiLevel }) => void;
+  startAiGame: (payload: { level: AiLevel; timeLimitSeconds?: number }) => void;
+  gameReady: (payload: { gameId: string }) => void;
   move: (payload: MovePayload) => void;
   resign: () => void;
   drawOffer: () => void;

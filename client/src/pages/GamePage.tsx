@@ -111,8 +111,6 @@ export default function GamePage() {
     getSocket().emit('drawDecline');
   };
 
-  const boardMaxWidth = 'min(90vmin, 600px)';
-
   // ── Game end result — fixed centered overlay ──────────────────────────────
   const GameEndModal = gameEndResult ? (
     <div
@@ -214,6 +212,8 @@ export default function GamePage() {
           opponentName={opponentUsername ?? 'AI'}
           botMs={oppMs}
           isBotActive={!isMyTurn && !gameState.isGameOver}
+          myMs={myMs}
+          isMyActive={isMyTurn && !gameState.isGameOver}
           isGameOver={gameState.isGameOver}
           myName={user?.username}
           myRating={user?.rating}
@@ -232,7 +232,6 @@ export default function GamePage() {
           {/* Board column */}
           <div className="flex flex-col items-center justify-center flex-1 p-4 gap-3 min-w-0">
             <Chessboard gameId={gameState.id} />
-            <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
           </div>
 
           {/* Side panel with slide animation */}
@@ -276,13 +275,23 @@ export default function GamePage() {
 
       {/* Player names header */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800 flex-shrink-0">
-        <div>
-          <p className="font-semibold text-white text-sm leading-tight">{opponentUsername}</p>
-          {opponentRating && <p className="text-xs text-gray-400">{opponentRating} ELO</p>}
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="font-semibold text-white text-sm leading-tight">{opponentUsername}</p>
+            {opponentRating && <p className="text-xs text-gray-400">{opponentRating} ELO</p>}
+          </div>
+          <div style={{ opacity: !isMyTurn && !gameState.isGameOver ? 1.0 : 0.45, transition: 'opacity 0.3s' }}>
+            <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} compact />
+          </div>
         </div>
-        <div className="text-right">
-          <p className="font-semibold text-white text-sm leading-tight">{user?.username}</p>
-          <p className="text-xs text-gray-400">{user?.rating} ELO</p>
+        <div className="flex items-center gap-2">
+          <div style={{ opacity: isMyTurn && !gameState.isGameOver ? 1.0 : 0.45, transition: 'opacity 0.3s' }}>
+            <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} compact />
+          </div>
+          <div className="text-right">
+            <p className="font-semibold text-white text-sm leading-tight">{user?.username}</p>
+            <p className="text-xs text-gray-400">{user?.rating} ELO</p>
+          </div>
         </div>
       </div>
 
@@ -290,15 +299,7 @@ export default function GamePage() {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Board column */}
         <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
-          <div className="w-full flex justify-end" style={{ maxWidth: boardMaxWidth }}>
-            <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
-          </div>
-
           <Chessboard gameId={gameState.id} />
-
-          <div className="w-full flex justify-end" style={{ maxWidth: boardMaxWidth }}>
-            <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
-          </div>
         </div>
 
         {/* Sidebar */}

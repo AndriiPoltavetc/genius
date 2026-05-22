@@ -9,7 +9,6 @@ import RegisterPage from './pages/RegisterPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 import ProfilePage from './pages/ProfilePage';
-import LeaderboardPage from './pages/LeaderboardPage';
 import HistoryPage from './pages/HistoryPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -33,7 +32,7 @@ export default function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/leaderboard" element={<Navigate to="/lobby" replace />} />
 
       <Route
         path="/lobby"

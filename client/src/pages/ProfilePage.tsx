@@ -6,26 +6,6 @@ import Header from '../components/Header';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { updateUser } from '../features/auth/authSlice';
 
-// ── Piece style preview ────────────────────────────────────────────────────
-const PIECE_PREVIEWS: Record<string, { white: string; black: string; stroke?: boolean; shadow?: boolean }> = {
-  standard: { white: '♗', black: '♝' },
-  minimalist: { white: '♗', black: '♝' },
-  classic: { white: '♗', black: '♝', stroke: true },
-};
-
-function PiecePreview({ styleId }: { styleId: string }) {
-  const { white, black, stroke } = PIECE_PREVIEWS[styleId] ?? PIECE_PREVIEWS['standard'];
-  const textStyle: React.CSSProperties = stroke
-    ? { WebkitTextStroke: '0.5px #555', paintOrder: 'stroke fill' as React.CSSProperties['paintOrder'] }
-    : {};
-  return (
-    <span className="flex items-center gap-1 text-xl select-none" style={textStyle}>
-      <span>{white}</span>
-      <span>{black}</span>
-    </span>
-  );
-}
-
 // ── Public profile view ────────────────────────────────────────────────────
 function PublicProfileView({ userId }: { userId: string }) {
   const [user, setUser] = useState<UserPublic | null>(null);
@@ -107,12 +87,6 @@ function PublicProfileView({ userId }: { userId: string }) {
 }
 
 // ── Own settings view ──────────────────────────────────────────────────────
-const PIECE_STYLES = [
-  { id: 'standard', label: 'Стандартний' },
-  { id: 'minimalist', label: 'Мінімалістичний' },
-  { id: 'classic', label: 'Класичний' },
-];
-
 const COLOR_PREFS = [
   { id: 'any', label: 'Без різниці' },
   { id: 'white', label: 'Білі' },
@@ -129,14 +103,7 @@ function OwnSettingsView() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSaving, setUsernameSaving] = useState(false);
 
-  const [pieces, setPieces] = useState(() => localStorage.getItem('genius_pieces') ?? 'standard');
   const [colorPref, setColorPref] = useState(() => localStorage.getItem('genius_color_pref') ?? 'any');
-
-  const applyPieces = (p: string) => {
-    setPieces(p);
-    localStorage.setItem('genius_pieces', p);
-    window.dispatchEvent(new Event('genius:settings-changed'));
-  };
 
   const applyColorPref = (c: string) => {
     setColorPref(c);
@@ -246,25 +213,6 @@ function OwnSettingsView() {
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 mb-3">Стиль фігур</h3>
-            <div className="space-y-2">
-              {PIECE_STYLES.map((p) => (
-                <label key={p.id} className="flex items-center gap-3 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="pieces"
-                    value={p.id}
-                    checked={pieces === p.id}
-                    onChange={() => applyPieces(p.id)}
-                    className="accent-primary-500"
-                  />
-                  <span className="text-white text-sm group-hover:text-primary-300 transition-colors flex-1">{p.label}</span>
-                  <PiecePreview styleId={p.id} />
-                </label>
-              ))}
-            </div>
-          </section>
         </div>
 
       </div>

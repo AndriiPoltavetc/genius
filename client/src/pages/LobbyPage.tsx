@@ -8,12 +8,21 @@ import { gameStarted, searchStarted, searchCancelled } from '../features/game/ga
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { logout, updateUser } from '../features/auth/authSlice';
 import { useGetUserByIdQuery } from '../features/auth/authApi';
-import type { AiLevel } from '../shared-types';
+import type { AiLevel, LeaderboardEntry } from '../shared-types';
 
 const AI_LEVELS: { level: AiLevel; label: string; description: string; depth: number }[] = [
   { level: 'EASY', label: '🟢 Легкий', description: 'Випадкові помилки', depth: 1 },
   { level: 'MEDIUM', label: '🟡 Середній', description: 'Стандартний', depth: 2 },
   { level: 'HARD', label: '🔴 Важкий', description: 'Сильний', depth: 3 },
+];
+
+const TIME_OPTIONS: { label: string; seconds: number }[] = [
+  { label: '3 хв', seconds: 3 * 60 },
+  { label: '5 хв', seconds: 5 * 60 },
+  { label: '10 хв', seconds: 10 * 60 },
+  { label: '15 хв', seconds: 15 * 60 },
+  { label: '30 хв', seconds: 30 * 60 },
+  { label: '∞', seconds: 0 },
 ];
 
 export default function LobbyPage() {
@@ -35,13 +44,28 @@ export default function LobbyPage() {
     : 0;
 
   const [showSettings, setShowSettings] = useState(false);
+  const [pendingAiLevel, setPendingAiLevel] = useState<AiLevel | null>(null);
+
+  // Leaderboard
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+
+  useEffect(() => {
+    void fetch(`${import.meta.env['VITE_API_URL'] as string}/api/leaderboard`)
+      .then((r) => r.json())
+      .then((data: LeaderboardEntry[]) => {
+        setLeaderboard(data.slice(0, 10));
+        setLeaderboardLoading(false);
+      })
+      .catch(() => setLeaderboardLoading(false));
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
     void navigate('/login');
   };
 
-  const startAiGame = (level: AiLevel) => {
+  const startAiGame = (level: AiLevel, timeLimitSeconds: number) => {
     const socket = getSocket();
     socket.off('gameStart');
     socket.once('gameStart', (payload) => {
@@ -52,7 +76,8 @@ export default function LobbyPage() {
       }));
       void navigate(`/game/${payload.gameId}`);
     });
-    socket.emit('startAiGame', { level });
+    socket.emit('startAiGame', { level, timeLimitSeconds });
+    setPendingAiLevel(null);
   };
 
   const searchGame = () => {
@@ -68,6 +93,7 @@ export default function LobbyPage() {
         opponentUsername: payload.opponent?.username,
         opponentRating: payload.opponent?.rating,
       }));
+      socket.emit('gameReady', { gameId: payload.gameId });
       void navigate(`/game/${payload.gameId}`);
     });
   };
@@ -162,20 +188,50 @@ export default function LobbyPage() {
               <p className="text-gray-400 text-sm mb-4">
                 Minimax + Alpha-Beta, три рівні. Не впливає на рейтинг.
               </p>
-              <div className="space-y-2">
-                {AI_LEVELS.map(({ level, label, description, depth }) => (
-                  <motion.button
-                    key={level}
-                    onClick={() => startAiGame(level)}
-                    className="btn-secondary w-full text-left flex justify-between items-center"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+
+              {pendingAiLevel ? (
+                <div>
+                  <p className="text-sm text-gray-400 mb-3">
+                    Рівень: <span className="font-semibold text-white">
+                      {AI_LEVELS.find((l) => l.level === pendingAiLevel)?.label}
+                    </span>. Оберіть час:
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {TIME_OPTIONS.map(({ label, seconds }) => (
+                      <motion.button
+                        key={seconds}
+                        onClick={() => startAiGame(pendingAiLevel, seconds)}
+                        className="btn-primary text-sm py-2"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        {label}
+                      </motion.button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setPendingAiLevel(null)}
+                    className="btn-secondary w-full text-sm"
                   >
-                    <span>{label}</span>
-                    <span className="text-gray-400 text-xs">{description} · глибина {depth}</span>
-                  </motion.button>
-                ))}
-              </div>
+                    Скасувати
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {AI_LEVELS.map(({ level, label, description, depth }) => (
+                    <motion.button
+                      key={level}
+                      onClick={() => setPendingAiLevel(level)}
+                      className="btn-secondary w-full text-left flex justify-between items-center"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>{label}</span>
+                      <span className="text-gray-400 text-xs">{description} · глибина {depth}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -255,12 +311,12 @@ export default function LobbyPage() {
               >
                 📋 Моя історія
               </Link>
-              <Link
-                to="/leaderboard"
-                className="text-primary-400 hover:underline text-sm font-medium"
+              <button
+                onClick={() => document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-primary-400 hover:underline text-sm font-medium bg-transparent border-none cursor-pointer p-0"
               >
                 🏆 Лідерборд
-              </Link>
+              </button>
               <Link
                 to={`/profile/${user?.id ?? ''}`}
                 className="text-primary-400 hover:underline text-sm font-medium"
@@ -270,6 +326,50 @@ export default function LobbyPage() {
             </div>
           </div>
 
+        </div>
+
+        {/* ── Leaderboard section ───────────────────────────────────── */}
+        <div id="leaderboard" className="mt-8">
+          <h2 className="text-xl font-bold text-white mb-4">🏆 Лідерборд</h2>
+          {leaderboardLoading ? (
+            <p className="text-gray-400">Завантаження...</p>
+          ) : leaderboard.length === 0 ? (
+            <p className="text-gray-400">Немає даних.</p>
+          ) : (
+            <div className="card p-0 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-gray-400">#</th>
+                    <th className="px-4 py-3 text-left text-gray-400">Гравець</th>
+                    <th className="px-4 py-3 text-right text-gray-400">ELO</th>
+                    <th className="px-4 py-3 text-right text-gray-400">Партій</th>
+                    <th className="px-4 py-3 text-right text-gray-400">W%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((entry) => (
+                    <tr key={entry.userId} className="border-t border-gray-800 hover:bg-gray-800/50">
+                      <td className="px-4 py-3 text-gray-400">
+                        {entry.rank <= 3 ? (['🥇', '🥈', '🥉'] as const)[entry.rank - 1] : entry.rank}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/profile/${entry.userId}`}
+                          className="text-primary-400 hover:underline font-medium"
+                        >
+                          {entry.username}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-white">{entry.rating}</td>
+                      <td className="px-4 py-3 text-right text-gray-400">{entry.gamesPlayed}</td>
+                      <td className="px-4 py-3 text-right text-gray-400">{entry.winRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
     </div>
