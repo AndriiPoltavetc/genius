@@ -16,9 +16,9 @@ const activePairings = new Set<string>();
 export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSocket): void {
   const { userId, username, rating } = socket.data;
 
-  socket.on('joinQueue', async () => {
+  socket.on('joinQueue', async (payload) => {
     try {
-      await addToQueue({ userId, username, rating, joinedAt: Date.now() });
+      await addToQueue({ userId, username, rating, joinedAt: Date.now(), colorPreference: payload?.colorPreference ?? 'any' });
       socket.emit('queueJoined');
 
       const match = await findMatch();
@@ -31,8 +31,22 @@ export function registerMatchmakingHandlers(io: GeniusServer, socket: GeniusSock
       activePairings.add(pairKey);
       setTimeout(() => activePairings.delete(pairKey), 5000);
 
-      // Randomly assign colors
-      const [white, black] = Math.random() < 0.5 ? [playerA, playerB] : [playerB, playerA];
+      // Assign colors based on preference; fall back to random on conflict
+      const pA = playerA.colorPreference ?? 'any';
+      const pB = playerB.colorPreference ?? 'any';
+      let white: typeof playerA;
+      let black: typeof playerA;
+      if (pA === 'white' && pB !== 'white') {
+        [white, black] = [playerA, playerB];
+      } else if (pB === 'white' && pA !== 'white') {
+        [white, black] = [playerB, playerA];
+      } else if (pA === 'black' && pB !== 'black') {
+        [white, black] = [playerB, playerA];
+      } else if (pB === 'black' && pA !== 'black') {
+        [white, black] = [playerA, playerB];
+      } else {
+        [white, black] = Math.random() < 0.5 ? [playerA, playerB] : [playerB, playerA];
+      }
 
       const state = await createGame(white.userId, black.userId, false);
       const chess = new Chess();

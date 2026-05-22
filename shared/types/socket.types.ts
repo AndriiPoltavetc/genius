@@ -2,7 +2,7 @@ import type { AiLevel, GameState, GameResult, ResultReason, Move } from './game.
 
 // Events sent from Client → Server
 export interface ClientToServerEvents {
-  joinQueue: () => void;
+  joinQueue: (payload?: { colorPreference?: 'white' | 'black' | 'any' }) => void;
   leaveQueue: () => void;
   startAiGame: (payload: { level: AiLevel }) => void;
   move: (payload: MovePayload) => void;

@@ -11,6 +11,7 @@ export interface QueuedPlayer {
   username: string;
   rating: number;
   joinedAt: number;
+  colorPreference?: 'white' | 'black' | 'any';
 }
 
 export async function addToQueue(player: QueuedPlayer): Promise<void> {

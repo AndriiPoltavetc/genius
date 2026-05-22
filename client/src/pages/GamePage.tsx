@@ -6,6 +6,8 @@ import MoveHistory from '../features/game/components/MoveHistory';
 import Timer from '../features/game/components/Timer';
 import ChatBox from '../features/game/components/ChatBox';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import TopBar from '../features/game/components/TopBar';
+import SidePanel from '../features/game/components/SidePanel';
 import { getSocket } from '../features/game/socket';
 import { moveMade, gameEnded } from '../features/game/gameSlice';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
@@ -23,6 +25,8 @@ export default function GamePage() {
   const [showResignModal, setShowResignModal] = useState(false);
   const [showDrawOfferModal, setShowDrawOfferModal] = useState(false);
   const [drawDeclinedToast, setDrawDeclinedToast] = useState(false);
+  const [showPanel, setShowPanel] = useState(false);
+  const [sidePanelTab, setSidePanelTab] = useState<'moves' | 'settings'>('moves');
 
   // Server-authoritative timer values, updated via syncTime events
   const [whiteMs, setWhiteMs] = useState(() => gameState?.whiteTimeMs ?? 600_000);
@@ -189,11 +193,11 @@ export default function GamePage() {
   ) : null;
 
   // ══════════════════════════════════════════════════════════════════════════
-  // AI GAME — simplified layout: board + timers + resign only, no sidebar
+  // AI GAME — top bar + board + collapsible side panel
   // ══════════════════════════════════════════════════════════════════════════
   if (gameState.isAiGame) {
     return (
-      <div className="h-screen bg-gray-950 flex flex-col items-center justify-center gap-2 p-4 overflow-hidden">
+      <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
         {GameEndModal}
         <ConfirmModal
           isOpen={showResignModal}
@@ -206,41 +210,47 @@ export default function GamePage() {
           variant="danger"
         />
 
-        {/* Opponent info + timer */}
-        <div
-          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
-          style={{ maxWidth: boardMaxWidth }}
-        >
-          <div>
-            <p className="font-semibold text-white">{opponentUsername}</p>
-            {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
+        <TopBar
+          opponentName={opponentUsername ?? 'AI'}
+          botMs={oppMs}
+          isBotActive={!isMyTurn && !gameState.isGameOver}
+          onTogglePanel={() => { setShowPanel((p) => !p); setSidePanelTab('moves'); }}
+          onOpenSettings={() => { setShowPanel(true); setSidePanelTab('settings'); }}
+        />
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Board column */}
+          <div className="flex flex-col items-center justify-center flex-1 p-4 gap-2 min-w-0">
+            <Chessboard gameId={gameState.id} />
+            <div
+              className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
+              style={{ maxWidth: boardMaxWidth }}
+            >
+              <div>
+                <p className="font-semibold text-white">{user?.username}</p>
+                <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
+              </div>
+              <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
+            </div>
           </div>
-          <Timer currentMs={oppMs} isActive={!isMyTurn && !gameState.isGameOver} />
-        </div>
 
-        <Chessboard gameId={gameState.id} />
-
-        {/* My info + timer */}
-        <div
-          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
-          style={{ maxWidth: boardMaxWidth }}
-        >
-          <div>
-            <p className="font-semibold text-white">{user?.username}</p>
-            <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
-          </div>
-          <Timer currentMs={myMs} isActive={isMyTurn && !gameState.isGameOver} />
-        </div>
-
-        {/* Resign button below board */}
-        <div style={{ maxWidth: boardMaxWidth }} className="w-full">
-          <button
-            onClick={() => setShowResignModal(true)}
-            disabled={gameState.isGameOver}
-            className="btn-secondary w-full text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          {/* Side panel with slide animation */}
+          <div
+            style={{
+              width: showPanel ? '280px' : '0px',
+              transition: 'width 300ms ease',
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
           >
-            Здатися
-          </button>
+            <SidePanel
+              moves={gameState.moves}
+              onResign={() => setShowResignModal(true)}
+              isGameOver={gameState.isGameOver}
+              activeTab={sidePanelTab}
+              onTabChange={setSidePanelTab}
+            />
+          </div>
         </div>
       </div>
     );

@@ -56,7 +56,8 @@ export default function LobbyPage() {
     const socket = getSocket();
     socket.off('gameStart');
     dispatch(searchStarted());
-    socket.emit('joinQueue');
+    const colorPreference = (localStorage.getItem('genius_color_pref') ?? 'any') as 'white' | 'black' | 'any';
+    socket.emit('joinQueue', { colorPreference });
     socket.once('gameStart', (payload) => {
       dispatch(gameStarted({
         gameState: payload.gameState,

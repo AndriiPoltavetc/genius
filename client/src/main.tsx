@@ -8,6 +8,10 @@ import App from './App';
 import './styles/index.css';
 import './i18n';
 
+// Restore theme before first paint to avoid flash
+const savedTheme = localStorage.getItem('genius_theme') ?? 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
