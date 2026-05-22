@@ -4,11 +4,13 @@ interface TopBarProps {
   opponentName: string;
   botMs: number;
   isBotActive: boolean;
+  isGameOver: boolean;
   onTogglePanel: () => void;
   onOpenSettings: () => void;
+  onResign: () => void;
 }
 
-export default function TopBar({ opponentName, botMs, isBotActive, onTogglePanel, onOpenSettings }: TopBarProps) {
+export default function TopBar({ opponentName, botMs, isBotActive, isGameOver, onTogglePanel, onOpenSettings, onResign }: TopBarProps) {
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800 flex-shrink-0">
       <div className="flex items-center gap-3">
@@ -29,6 +31,13 @@ export default function TopBar({ opponentName, botMs, isBotActive, onTogglePanel
           title="Налаштування"
         >
           ⚙️
+        </button>
+        <button
+          onClick={onResign}
+          disabled={isGameOver}
+          className="px-3 py-1 rounded bg-red-800 hover:bg-red-700 text-white text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Здатися
         </button>
       </div>
     </div>

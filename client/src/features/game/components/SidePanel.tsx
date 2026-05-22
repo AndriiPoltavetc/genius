@@ -5,13 +5,11 @@ import SettingsPanel from '../../../components/SettingsPanel';
 
 interface SidePanelProps {
   moves: Move[];
-  onResign: () => void;
-  isGameOver: boolean;
   activeTab: 'moves' | 'settings';
   onTabChange: (tab: 'moves' | 'settings') => void;
 }
 
-export default function SidePanel({ moves, onResign, isGameOver, activeTab, onTabChange }: SidePanelProps) {
+export default function SidePanel({ moves, activeTab, onTabChange }: SidePanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,15 +62,6 @@ export default function SidePanel({ moves, onResign, isGameOver, activeTab, onTa
               </tbody>
             </table>
             <div ref={bottomRef} />
-          </div>
-          <div className="p-3 border-t border-gray-800 flex-shrink-0">
-            <button
-              onClick={onResign}
-              disabled={isGameOver}
-              className="btn-secondary w-full text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Здатися
-            </button>
           </div>
         </div>
       ) : (

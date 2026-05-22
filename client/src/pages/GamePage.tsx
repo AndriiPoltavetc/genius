@@ -214,6 +214,8 @@ export default function GamePage() {
           opponentName={opponentUsername ?? 'AI'}
           botMs={oppMs}
           isBotActive={!isMyTurn && !gameState.isGameOver}
+          isGameOver={gameState.isGameOver}
+          onResign={() => setShowResignModal(true)}
           onTogglePanel={() => {
             if (showPanel && sidePanelTab === 'moves') { setShowPanel(false); }
             else { setShowPanel(true); setSidePanelTab('moves'); }
@@ -251,8 +253,6 @@ export default function GamePage() {
           >
             <SidePanel
               moves={gameState.moves}
-              onResign={() => setShowResignModal(true)}
-              isGameOver={gameState.isGameOver}
               activeTab={sidePanelTab}
               onTabChange={setSidePanelTab}
             />

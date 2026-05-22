@@ -265,7 +265,7 @@ export default function LobbyPage() {
                 to={`/profile/${user?.id ?? ''}`}
                 className="text-gray-500 hover:text-gray-400 text-sm"
               >
-                Повний профіль
+                Налаштування профілю
               </Link>
             </div>
           </div>

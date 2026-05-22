@@ -62,6 +62,17 @@
 [data-theme="classic"] .text-gray-400 { color: #6b4c2a !important; }
 [data-theme="classic"] .border-gray-800 { border-color: #c9a87a !important; }
 
+/* ── Button theme overrides ─────────────────────────────────────────────── */
+[data-theme="light"] .btn-primary  { background-color: #2563eb !important; color: #ffffff !important; }
+[data-theme="light"] .btn-primary:hover { background-color: #1d4ed8 !important; }
+[data-theme="light"] .btn-secondary { background-color: #e2e8f0 !important; color: #1e293b !important; }
+[data-theme="light"] .btn-secondary:hover { background-color: #cbd5e1 !important; }
+
+[data-theme="classic"] .btn-primary  { background-color: #4a7c59 !important; color: #ffffff !important; }
+[data-theme="classic"] .btn-primary:hover { background-color: #3d6b4a !important; }
+[data-theme="classic"] .btn-secondary { background-color: #c8a87a !important; color: #2d1b00 !important; }
+[data-theme="classic"] .btn-secondary:hover { background-color: #b89060 !important; }
+
 @layer components {
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;

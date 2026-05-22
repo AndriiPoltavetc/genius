@@ -1,8 +1,33 @@
 import { Router } from 'express';
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
+import { authMiddleware, type AuthRequest } from '../../middleware/auth.middleware';
 
 export const userRoutes = Router();
+
+userRoutes.patch('/profile', authMiddleware, async (req: AuthRequest, res, next) => {
+  try {
+    const { username } = req.body as { username?: string };
+    const trimmed = username?.trim() ?? '';
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      res.status(400).json({ error: 'Нікнейм 2–20 символів' });
+      return;
+    }
+    const userId = req.user!.userId;
+    const existing = await prisma.user.findUnique({ where: { username: trimmed } });
+    if (existing && existing.id !== userId) {
+      res.status(409).json({ error: 'Нікнейм вже зайнятий' });
+      return;
+    }
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { username: trimmed },
+    });
+    res.json({ username: updated.username });
+  } catch (err) {
+    next(err);
+  }
+});
 
 userRoutes.get('/:userId', async (req, res, next) => {
   try {
