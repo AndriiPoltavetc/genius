@@ -10,6 +10,11 @@ export interface User {
   createdAt: string;
 }
 
+export interface AiLevelStats {
+  played: number;
+  wins: number;
+}
+
 export interface UserPublic {
   id: string;
   username: string;
@@ -19,6 +24,11 @@ export interface UserPublic {
   gamesLost: number;
   gamesDrawn: number;
   createdAt: string;
+  aiStats?: {
+    easy: AiLevelStats;
+    medium: AiLevelStats;
+    hard: AiLevelStats;
+  };
 }
 
 export interface AuthTokenPayload {

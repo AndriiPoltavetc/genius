@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import SettingsPanel from '../components/SettingsPanel';
 import { motion } from 'framer-motion';
 
 import { getSocket } from '../features/game/socket';
@@ -32,6 +33,8 @@ export default function LobbyPage() {
   const winRate = profile && profile.gamesPlayed > 0
     ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100)
     : 0;
+
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -76,6 +79,24 @@ export default function LobbyPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
+      {showSettings && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="w-72 bg-gray-900 border-l border-gray-800 h-full overflow-y-auto shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+              <h2 className="font-semibold text-white">Налаштування</h2>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+            </div>
+            <SettingsPanel />
+          </div>
+        </div>
+      )}
       {/* ── Header ───────────────────────────────────────────────────── */}
       <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <span className="text-2xl font-bold text-primary-400 tracking-tight">Genius</span>
@@ -84,6 +105,13 @@ export default function LobbyPage() {
             <p className="font-semibold text-white leading-tight">{user?.username}</p>
             <p className="text-sm font-bold text-primary-400 leading-tight">{user?.rating} ELO</p>
           </div>
+          <button
+            onClick={() => setShowSettings((p) => !p)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors text-base leading-none"
+            title="Налаштування"
+          >
+            ⚙️
+          </button>
           <button onClick={handleLogout} className="btn-secondary text-sm px-3 py-1.5">
             Вийти
           </button>
@@ -198,6 +226,26 @@ export default function LobbyPage() {
                 />
               </div>
             </div>
+
+            {/* AI stats */}
+            {profile?.aiStats && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Статистика проти ШІ</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { label: 'Легкий', stats: profile.aiStats.easy },
+                    { label: 'Середній', stats: profile.aiStats.medium },
+                    { label: 'Важкий', stats: profile.aiStats.hard },
+                  ] as const).map(({ label, stats }) => (
+                    <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                      <p className="text-xs text-gray-400">{label}</p>
+                      <p className="text-sm font-bold text-white">{stats.played} ігор</p>
+                      <p className="text-xs text-gray-500">{stats.wins} пер.</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Links */}
             <div className="flex gap-4 pt-2 border-t border-gray-800">

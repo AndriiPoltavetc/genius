@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import type { UserPublic } from '../shared-types';
+import Header from '../components/Header';
 
 export default function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
-  const navigate = useNavigate();
   const [user, setUser] = useState<UserPublic | null>(null);
 
   useEffect(() => {
@@ -20,15 +20,10 @@ export default function ProfilePage() {
   const winRate = user.gamesPlayed > 0 ? Math.round((user.gamesWon / user.gamesPlayed) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 py-8">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
+      <Header title="Профіль" />
+      <div className="flex-1 px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <button
-          onClick={() => void navigate('/lobby')}
-          className="flex items-center gap-2 px-4 py-2 mb-6 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-        >
-          ← На головну
-        </button>
-
         <div className="card mb-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center text-2xl font-bold text-white">
@@ -69,6 +64,26 @@ export default function ProfilePage() {
           </div>
           <p className="text-white font-bold mt-1">{winRate}%</p>
         </div>
+
+        {user.aiStats && (
+          <div className="card mt-4">
+            <h3 className="text-sm font-semibold text-gray-400 mb-3">Статистика проти ШІ</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { label: 'Легкий', stats: user.aiStats.easy },
+                { label: 'Середній', stats: user.aiStats.medium },
+                { label: 'Важкий', stats: user.aiStats.hard },
+              ] as const).map(({ label, stats }) => (
+                <div key={label} className="bg-gray-800 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-400 mb-1">{label}</p>
+                  <p className="text-lg font-bold text-white">{stats.played}</p>
+                  <p className="text-xs text-gray-500">{stats.wins} пер.</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );

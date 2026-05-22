@@ -174,11 +174,6 @@ export async function finalizeGame(
         }),
       ]);
     }
-  } else if (state.isAiGame) {
-    await prisma.user.update({
-      where: { id: state.whitePlayerId },
-      data: { gamesPlayed: { increment: 1 } },
-    });
   }
 
   await prisma.game.update({

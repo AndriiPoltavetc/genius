@@ -214,8 +214,14 @@ export default function GamePage() {
           opponentName={opponentUsername ?? 'AI'}
           botMs={oppMs}
           isBotActive={!isMyTurn && !gameState.isGameOver}
-          onTogglePanel={() => { setShowPanel((p) => !p); setSidePanelTab('moves'); }}
-          onOpenSettings={() => { setShowPanel(true); setSidePanelTab('settings'); }}
+          onTogglePanel={() => {
+            if (showPanel && sidePanelTab === 'moves') { setShowPanel(false); }
+            else { setShowPanel(true); setSidePanelTab('moves'); }
+          }}
+          onOpenSettings={() => {
+            if (showPanel && sidePanelTab === 'settings') { setShowPanel(false); }
+            else { setShowPanel(true); setSidePanelTab('settings'); }
+          }}
         />
 
         <div className="flex flex-1 overflow-hidden">

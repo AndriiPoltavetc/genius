@@ -124,15 +124,28 @@ export default function Chessboard({ gameId }: ChessboardProps) {
         const chess = new Chess(gameState.fen);
         const moves = chess.moves({ square, verbose: true });
         const highlights: SquareStyles = {};
+        const theme = document.documentElement.getAttribute('data-theme') ?? 'dark';
+        const normalGradient =
+          theme === 'light'
+            ? 'radial-gradient(circle, rgba(180,0,0,0.4) 25%, transparent 25%)'
+            : theme === 'classic'
+            ? 'radial-gradient(circle, rgba(0,100,0,0.5) 25%, transparent 25%)'
+            : 'radial-gradient(circle, rgba(200,200,200,0.4) 25%, transparent 25%)';
+        const captureRing =
+          theme === 'light'
+            ? 'radial-gradient(circle, transparent 60%, rgba(180,0,0,0.4) 60%)'
+            : theme === 'classic'
+            ? 'radial-gradient(circle, transparent 60%, rgba(0,100,0,0.5) 60%)'
+            : 'radial-gradient(circle, transparent 60%, rgba(200,200,200,0.4) 60%)';
         moves.forEach((m) => {
           const isCapture = m.flags.includes('c') || m.flags.includes('e');
           const isCastle = m.flags.includes('k') || m.flags.includes('q');
           if (isCastle) {
             highlights[m.to] = { backgroundColor: 'rgba(0, 100, 200, 0.4)' };
           } else if (isCapture) {
-            highlights[m.to] = { background: 'radial-gradient(circle, transparent 60%, rgba(20,85,30,0.5) 60%)' };
+            highlights[m.to] = { background: captureRing };
           } else {
-            highlights[m.to] = { background: 'radial-gradient(circle, rgba(20,85,30,0.5) 25%, transparent 25%)' };
+            highlights[m.to] = { background: normalGradient };
           }
         });
         setMoveSquares(highlights);
