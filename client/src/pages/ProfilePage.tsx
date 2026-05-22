@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import type { UserPublic } from '../shared-types';
 
 export default function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserPublic | null>(null);
 
   useEffect(() => {
@@ -21,6 +22,13 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
       <div className="max-w-2xl mx-auto">
+        <button
+          onClick={() => void navigate('/lobby')}
+          className="text-gray-400 hover:text-white text-sm mb-4 flex items-center gap-1 bg-transparent border-none cursor-pointer"
+        >
+          ← Назад
+        </button>
+
         <div className="card mb-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center text-2xl font-bold text-white">

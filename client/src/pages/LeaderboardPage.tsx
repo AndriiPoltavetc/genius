@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { LeaderboardEntry } from '../shared-types';
 
 export default function LeaderboardPage() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +20,12 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        <button
+          onClick={() => void navigate('/lobby')}
+          className="text-gray-400 hover:text-white text-sm mb-4 flex items-center gap-1 bg-transparent border-none cursor-pointer"
+        >
+          ← Назад
+        </button>
         <h1 className="text-3xl font-bold text-white mb-6">🏆 Топ-100 гравців</h1>
 
         {loading ? (

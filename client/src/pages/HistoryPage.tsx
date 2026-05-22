@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppSelector } from '../app/hooks';
 import type { GameResult } from '../shared-types';
@@ -21,6 +21,7 @@ interface GameHistoryItem {
 }
 
 export default function HistoryPage() {
+  const navigate = useNavigate();
   const user = useAppSelector((s) => s.auth.user);
   const token = useAppSelector((s) => s.auth.accessToken);
   const [games, setGames] = useState<GameHistoryItem[]>([]);
@@ -64,6 +65,12 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        <button
+          onClick={() => void navigate('/lobby')}
+          className="text-gray-400 hover:text-white text-sm mb-4 flex items-center gap-1 bg-transparent border-none cursor-pointer"
+        >
+          ← Назад
+        </button>
         <h1 className="text-3xl font-bold text-white mb-6">📋 Моя історія партій</h1>
 
         {loading ? (

@@ -11,6 +11,13 @@ export interface MinimaxResult {
   nodesEvaluated: number;
 }
 
+interface SearchState {
+  nodes: number;
+  /** Unix timestamp (ms) after which search should stop; null = no limit */
+  deadline: number | null;
+  timedOut: boolean;
+}
+
 /**
  * Minimax algorithm with Alpha-Beta pruning.
  *
@@ -22,7 +29,7 @@ export interface MinimaxResult {
  * @param alpha       - best score the maximizing player can guarantee
  * @param beta        - best score the minimizing player can guarantee
  * @param maximizing  - true when it's the maximizing player's turn (White)
- * @param counter     - mutable counter for benchmarking node visits
+ * @param state       - shared mutable state: node counter + time limit
  */
 function minimaxInner(
   board: Chess,
@@ -30,9 +37,15 @@ function minimaxInner(
   alpha: number,
   beta: number,
   maximizing: boolean,
-  counter: { nodes: number },
+  state: SearchState,
 ): number {
-  counter.nodes++;
+  state.nodes++;
+
+  // Time-limit check: return static eval and mark timeout
+  if (state.deadline !== null && state.nodes % 512 === 0 && Date.now() > state.deadline) {
+    state.timedOut = true;
+    return evaluate(board);
+  }
 
   if (depth === 0 || board.isGameOver()) {
     return evaluate(board);
@@ -43,8 +56,9 @@ function minimaxInner(
   if (maximizing) {
     let maxEval = -Infinity;
     for (const move of moves) {
+      if (state.timedOut) break;
       board.move(move);
-      const score = minimaxInner(board, depth - 1, alpha, beta, false, counter);
+      const score = minimaxInner(board, depth - 1, alpha, beta, false, state);
       board.undo();
       if (score > maxEval) maxEval = score;
       if (score > alpha) alpha = score;
@@ -54,8 +68,9 @@ function minimaxInner(
   } else {
     let minEval = Infinity;
     for (const move of moves) {
+      if (state.timedOut) break;
       board.move(move);
-      const score = minimaxInner(board, depth - 1, alpha, beta, true, counter);
+      const score = minimaxInner(board, depth - 1, alpha, beta, true, state);
       board.undo();
       if (score < minEval) minEval = score;
       if (score < beta) beta = score;
@@ -68,10 +83,11 @@ function minimaxInner(
 /**
  * Top-level Minimax call that returns the best move and evaluation metrics.
  *
- * @param fen   - FEN string representing the position
- * @param depth - search depth (2=EASY, 3=MEDIUM, 4=HARD)
+ * @param fen          - FEN string representing the position
+ * @param depth        - search depth
+ * @param timeLimitMs  - optional hard time cap in milliseconds
  */
-export function findBestMove(fen: string, depth: number): MinimaxResult {
+export function findBestMove(fen: string, depth: number, timeLimitMs?: number): MinimaxResult {
   const board = new Chess(fen);
 
   if (board.isGameOver()) {
@@ -80,7 +96,11 @@ export function findBestMove(fen: string, depth: number): MinimaxResult {
 
   const isWhiteTurn = board.turn() === 'w';
   const moves = getOrderedMoves(board);
-  const counter = { nodes: 0 };
+  const state: SearchState = {
+    nodes: 0,
+    deadline: timeLimitMs != null ? Date.now() + timeLimitMs : null,
+    timedOut: false,
+  };
 
   let bestMove: string | null = null;
   let bestScore = isWhiteTurn ? -Infinity : Infinity;
@@ -88,8 +108,10 @@ export function findBestMove(fen: string, depth: number): MinimaxResult {
   let beta = Infinity;
 
   for (const move of moves) {
+    if (state.timedOut) break;
+
     board.move(move);
-    const score = minimaxInner(board, depth - 1, alpha, beta, !isWhiteTurn, counter);
+    const score = minimaxInner(board, depth - 1, alpha, beta, !isWhiteTurn, state);
     board.undo();
 
     if (isWhiteTurn ? score > bestScore : score < bestScore) {
@@ -104,5 +126,6 @@ export function findBestMove(fen: string, depth: number): MinimaxResult {
     }
   }
 
-  return { score: bestScore, bestMove, nodesEvaluated: counter.nodes };
+  // Guarantee we always return some move (first legal move as fallback)
+  return { score: bestScore, bestMove: bestMove ?? moves[0] ?? null, nodesEvaluated: state.nodes };
 }

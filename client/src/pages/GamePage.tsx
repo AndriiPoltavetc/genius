@@ -21,13 +21,25 @@ export default function GamePage() {
   const user = useAppSelector((s) => s.auth.user);
 
   const [showResignModal, setShowResignModal] = useState(false);
+  const [showDrawOfferModal, setShowDrawOfferModal] = useState(false);
+  const [drawDeclinedToast, setDrawDeclinedToast] = useState(false);
 
   useEffect(() => {
     if (!gameState) void navigate('/lobby');
   }, [gameState, navigate]);
 
+  // Block browser back button while game is active
   useEffect(() => {
-    // Guard: socket may not be initialized if the user refreshed the page
+    if (!gameState || gameState.isGameOver) return;
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [gameState?.isGameOver]);
+
+  useEffect(() => {
     let socket: ReturnType<typeof getSocket> | null = null;
     try {
       socket = getSocket();
@@ -43,9 +55,20 @@ export default function GamePage() {
       dispatch(gameEnded({ result, resultReason, ratingDelta: ratingChange?.delta }));
     });
 
+    socket.on('drawOffer', () => {
+      setShowDrawOfferModal(true);
+    });
+
+    socket.on('drawDeclined', () => {
+      setDrawDeclinedToast(true);
+      setTimeout(() => setDrawDeclinedToast(false), 3000);
+    });
+
     return () => {
       socket?.off('move');
       socket?.off('gameEnd');
+      socket?.off('drawOffer');
+      socket?.off('drawDeclined');
     };
   }, [dispatch]);
 
@@ -64,28 +87,119 @@ export default function GamePage() {
     getSocket().emit('drawOffer');
   };
 
-  // When AI opponent's timer expires, the player wins by timeout
+  const handleDrawAccept = () => {
+    setShowDrawOfferModal(false);
+    getSocket().emit('drawAccept');
+  };
+
+  const handleDrawDecline = () => {
+    setShowDrawOfferModal(false);
+    getSocket().emit('drawDecline');
+  };
+
   const handleAiTimeout = () => {
     getSocket().emit('timeout', { gameId: gameState.id });
   };
 
   const boardMaxWidth = 'min(90vmin, 600px)';
 
-  return (
-    <div className="h-screen bg-gray-950 flex flex-col md:flex-row overflow-hidden">
-      <ConfirmModal
-        isOpen={showResignModal}
-        title="Здатися?"
-        message="Ви впевнені, що хочете здатися? Це зарахується як поразка."
-        confirmText="Здатися"
-        cancelText="Скасувати"
-        onConfirm={handleResignConfirm}
-        onCancel={() => setShowResignModal(false)}
-        variant="danger"
-      />
+  // ── Game end result — fixed centered overlay ──────────────────────────────
+  const GameEndModal = gameEndResult ? (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div className="card text-center p-8 max-w-sm w-full mx-4">
+        <p className="text-3xl mb-3">
+          {gameEndResult.result === 'WHITE_WIN'
+            ? playerColor === 'w' ? '🏆 Перемога!' : '😢 Поразка'
+            : gameEndResult.result === 'BLACK_WIN'
+            ? playerColor === 'b' ? '🏆 Перемога!' : '😢 Поразка'
+            : '🤝 Нічия'}
+        </p>
+        <p className="text-gray-400 text-sm mb-2">{gameEndResult.resultReason}</p>
+        {gameEndResult.ratingDelta !== undefined && (
+          <p className={`text-xl font-bold mb-4 ${gameEndResult.ratingDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {gameEndResult.ratingDelta >= 0 ? '+' : ''}{gameEndResult.ratingDelta} ELO
+          </p>
+        )}
+        <button onClick={() => void navigate('/lobby')} className="btn-primary w-full">
+          До лобі
+        </button>
+      </div>
+    </div>
+  ) : null;
 
-      {/* Board column */}
-      <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
+  // ── Draw offer from opponent — modal ──────────────────────────────────────
+  const DrawOfferModal = showDrawOfferModal ? (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div className="card text-center p-6 max-w-xs w-full mx-4">
+        <p className="text-lg font-semibold text-white mb-1">🤝 Пропозиція нічиї</p>
+        <p className="text-gray-400 text-sm mb-5">Суперник пропонує зіграти внічию</p>
+        <div className="flex gap-3">
+          <button onClick={handleDrawDecline} className="btn-secondary flex-1">Відхилити</button>
+          <button onClick={handleDrawAccept} className="btn-primary flex-1">Прийняти</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // ── "Draw declined" toast ─────────────────────────────────────────────────
+  const DrawDeclinedToast = drawDeclinedToast ? (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: '2rem',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'rgba(239,68,68,0.9)',
+        color: '#fff',
+        padding: '10px 20px',
+        borderRadius: '8px',
+        zIndex: 60,
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      ✗ Суперник відхилив нічию
+    </div>
+  ) : null;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AI GAME — simplified layout: board + timers + resign only, no sidebar
+  // ══════════════════════════════════════════════════════════════════════════
+  if (gameState.isAiGame) {
+    return (
+      <div className="h-screen bg-gray-950 flex flex-col items-center justify-center gap-2 p-4 overflow-hidden">
+        {GameEndModal}
+        <ConfirmModal
+          isOpen={showResignModal}
+          title="Здатися?"
+          message="Ви впевнені, що хочете здатися? Це зарахується як поразка."
+          confirmText="Здатися"
+          cancelText="Скасувати"
+          onConfirm={handleResignConfirm}
+          onCancel={() => setShowResignModal(false)}
+          variant="danger"
+        />
+
         {/* Opponent info + timer */}
         <div
           className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
@@ -98,7 +212,7 @@ export default function GamePage() {
           <Timer
             initialMs={oppTimeMs}
             isActive={!isMyTurn && !gameState.isGameOver}
-            onTimeout={gameState.isAiGame ? handleAiTimeout : undefined}
+            onTimeout={handleAiTimeout}
           />
         </div>
 
@@ -115,15 +229,72 @@ export default function GamePage() {
           </div>
           <Timer initialMs={myTimeMs} isActive={isMyTurn && !gameState.isGameOver} />
         </div>
+
+        {/* Resign button below board */}
+        <div style={{ maxWidth: boardMaxWidth }} className="w-full">
+          <button
+            onClick={() => setShowResignModal(true)}
+            disabled={gameState.isGameOver}
+            className="btn-secondary w-full text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Здатися
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ONLINE GAME — board + sidebar
+  // ══════════════════════════════════════════════════════════════════════════
+  return (
+    <div className="h-screen bg-gray-950 flex flex-col md:flex-row overflow-hidden">
+      {GameEndModal}
+      {DrawOfferModal}
+      {DrawDeclinedToast}
+      <ConfirmModal
+        isOpen={showResignModal}
+        title="Здатися?"
+        message="Ви впевнені, що хочете здатися? Це зарахується як поразка."
+        confirmText="Здатися"
+        cancelText="Скасувати"
+        onConfirm={handleResignConfirm}
+        onCancel={() => setShowResignModal(false)}
+        variant="danger"
+      />
+
+      {/* Board column */}
+      <div className="flex flex-col items-center justify-center gap-2 p-2 md:p-6 md:flex-1 min-w-0">
+        <div
+          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
+          style={{ maxWidth: boardMaxWidth }}
+        >
+          <div>
+            <p className="font-semibold text-white">{opponentUsername}</p>
+            {opponentRating && <p className="text-gray-400 text-sm">{opponentRating} ELO</p>}
+          </div>
+          <Timer initialMs={oppTimeMs} isActive={!isMyTurn && !gameState.isGameOver} />
+        </div>
+
+        <Chessboard gameId={gameState.id} />
+
+        <div
+          className="flex justify-between items-center bg-gray-900 rounded-lg px-3 py-2 w-full"
+          style={{ maxWidth: boardMaxWidth }}
+        >
+          <div>
+            <p className="font-semibold text-white">{user?.username}</p>
+            <p className="text-gray-400 text-sm">{user?.rating} ELO</p>
+          </div>
+          <Timer initialMs={myTimeMs} isActive={isMyTurn && !gameState.isGameOver} />
+        </div>
       </div>
 
-      {/* Sidebar — resign/draw/history/chat */}
+      {/* Sidebar */}
       <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80">
         <MoveHistory moves={gameState.moves} />
+        <ChatBox gameId={gameState.id} />
 
-        {!gameState.isAiGame && <ChatBox gameId={gameState.id} />}
-
-        {/* Resign available any time during an active game */}
         <div className="flex gap-2">
           <button
             onClick={() => setShowResignModal(true)}
@@ -132,37 +303,14 @@ export default function GamePage() {
           >
             Здатися
           </button>
-          {!gameState.isAiGame && (
-            <button
-              onClick={handleDrawOffer}
-              disabled={gameState.isGameOver}
-              className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Нічия
-            </button>
-          )}
+          <button
+            onClick={handleDrawOffer}
+            disabled={gameState.isGameOver}
+            className="btn-secondary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Нічия
+          </button>
         </div>
-
-        {gameEndResult && (
-          <div className="card text-center">
-            <p className="text-2xl mb-2">
-              {gameEndResult.result === 'WHITE_WIN'
-                ? playerColor === 'w' ? '🏆 Перемога!' : '😢 Поразка'
-                : gameEndResult.result === 'BLACK_WIN'
-                ? playerColor === 'b' ? '🏆 Перемога!' : '😢 Поразка'
-                : '🤝 Нічия'}
-            </p>
-            <p className="text-gray-400 text-sm">{gameEndResult.resultReason}</p>
-            {gameEndResult.ratingDelta !== undefined && (
-              <p className={`text-lg font-bold ${gameEndResult.ratingDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {gameEndResult.ratingDelta >= 0 ? '+' : ''}{gameEndResult.ratingDelta} ELO
-              </p>
-            )}
-            <button onClick={() => void navigate('/lobby')} className="btn-primary mt-3 w-full">
-              До лобі
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

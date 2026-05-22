@@ -10,6 +10,9 @@ import { logger } from '../../utils/logger';
 type GeniusSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type GeniusServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
+// gameId → userId of the player who sent the draw offer
+const pendingDrawOffers = new Map<string, string>();
+
 export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): void {
   const { userId, username } = socket.data;
 
@@ -160,6 +163,51 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
       await finalizeGame(gameId, result, 'TIMEOUT');
     } catch (err) {
       logger.error('timeout error', { err, userId });
+    }
+  });
+
+  socket.on('drawOffer', async () => {
+    try {
+      const gameId = socket.data.currentGameId;
+      if (!gameId) return;
+      const game = await getActiveGame(gameId);
+      if (!game || game.isAiGame) return;
+
+      pendingDrawOffers.set(gameId, userId);
+      // Forward the offer to the opponent only
+      socket.to(gameId).emit('drawOffer');
+    } catch (err) {
+      logger.error('drawOffer error', { err, userId });
+    }
+  });
+
+  socket.on('drawAccept', async () => {
+    try {
+      const gameId = socket.data.currentGameId;
+      if (!gameId) return;
+
+      const offeringUserId = pendingDrawOffers.get(gameId);
+      if (!offeringUserId || offeringUserId === userId) return;
+
+      pendingDrawOffers.delete(gameId);
+      const result = 'DRAW' as const;
+      io.to(gameId).emit('gameEnd', { gameId, result, resultReason: 'DRAW_AGREED' });
+      await finalizeGame(gameId, result, 'DRAW_AGREED');
+    } catch (err) {
+      logger.error('drawAccept error', { err, userId });
+    }
+  });
+
+  socket.on('drawDecline', async () => {
+    try {
+      const gameId = socket.data.currentGameId;
+      if (!gameId) return;
+
+      pendingDrawOffers.delete(gameId);
+      // Notify the player who made the offer
+      socket.to(gameId).emit('drawDeclined');
+    } catch (err) {
+      logger.error('drawDecline error', { err, userId });
     }
   });
 

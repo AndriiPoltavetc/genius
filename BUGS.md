@@ -345,3 +345,74 @@
 - **Рішення:** `Timer.tsx`: `text-3xl` → `text-xl md:text-3xl`, padding `px-4 py-2` → `px-3 py-1.5 md:px-4 md:py-2`. Додано `tabular-nums` для стабільної ширини цифр. `GamePage.tsx`: головний контейнер `flex flex-col md:flex-row` — на мобільному вертикальний стек, на десктопі горизонтальний. Sidebar: `flex-col md:flex-row`, `border-t md:border-t-0 md:border-l`. Розмір дошки: `min(55vw, 600px)` → `min(90vmin, 600px)` — адаптується до орієнтації пристрою
 - **Як уникнути:** Всі ігрові UI компоненти мають використовувати Tailwind responsive prefixes (`sm:`, `md:`). Ніколи не задавати фіксований font-size без перевірки на мобільному viewport. `vmin` — корисна одиниця для квадратних елементів (шахова дошка)
 
+---
+
+### [2026-05-22] Zoom браузера при подвійному натисканні / pinch на мобільному
+
+- **Контекст:** `client/index.html`
+- **Симптом:** На мобільних пристроях браузер масштабував сторінку при подвійному торканні або pinch-to-zoom — порушувало layout шахівниці та таймерів
+- **Причина:** `<meta name="viewport">` не мав `maximum-scale=1.0, user-scalable=no`
+- **Рішення:** Додано `maximum-scale=1.0, user-scalable=no` до viewport meta у `client/index.html`
+- **Як уникнути:** Для ігрових та full-screen UI завжди додавати `user-scalable=no` щоб запобігти зміні масштабу браузером
+
+---
+
+### [2026-05-22] Порожній sidebar у грі проти ШІ — зайве місце на екрані
+
+- **Контекст:** `client/src/pages/GamePage.tsx`
+- **Симптом:** У грі проти ШІ справа від дошки відображався порожній блок (sidebar з MoveHistory без ходів + кнопка "Здатися") — займав 1/4 екрану без корисного контенту
+- **Причина:** `GamePage` мав єдиний layout з sidebar для обох режимів (AI та онлайн). Для AI гри чат вже був прихований але структура sidebar залишалась
+- **Рішення:** Розділено layout на два: AI-гра → вертикальне центрування (board + timers + resign під дошкою); Онлайн-гра → горизонтальний layout з sidebar (MoveHistory + Chat + resign/draw)
+- **Як уникнути:** AI та онлайн гра мають принципово різні UX потреби. Розділяти layout відповідно до режиму, а не ховати окремі компоненти через умовний рендеринг
+
+---
+
+### [2026-05-22] Вікно результату гри ховалось у sidebar — не помітне
+
+- **Контекст:** `client/src/pages/GamePage.tsx`
+- **Симптом:** Після завершення гри блок "Перемога / Поразка / Нічия" рендерився всередині правого sidebar — на мобільному міг бути прихований за межами viewport, на десктопі — малопомітний
+- **Причина:** Game end result компонент розміщувався умовно всередині `<div className="card">` у sidebar після кнопок
+- **Рішення:** Game end result переведено у `position: fixed` overlay по центру екрану — `inset: 0; background: rgba(0,0,0,0.75); z-index: 50; display: flex; align-items: center; justify-content: center`. Модальне вікно завжди видиме незалежно від скролу та розміру viewport
+- **Як уникнути:** Критичні події (кінець гри, результат) — завжди fixed overlay, ніколи не частина scrollable контейнера
+
+---
+
+### [2026-05-22] Браузерна кнопка "Назад" виходить з активної онлайн гри
+
+- **Контекст:** `client/src/pages/GamePage.tsx`
+- **Симптом:** Натискання кнопки назад у браузері під час онлайн гри переходило на попередню сторінку — гра залишалась активною на сервері, але клієнт покидав її без resign
+- **Причина:** React Router не блокує нативну браузерну навігацію. Pushstate history може бути перехоплений але не блокується автоматично
+- **Рішення:** При монтуванні `GamePage` (якщо `!gameState.isGameOver`) додається `window.history.pushState(null, '', href)` та listener `window.addEventListener('popstate', handler)`. Handler знову пушить поточний URL, ефективно блокуючи навігацію назад. При завершенні гри (`isGameOver`) ефект прибирається — навігація знову дозволена
+- **Як уникнути:** Завжди блокувати нативну навігацію у критичних потоках (онлайн гра, оплата, multi-step form). `useBlocker` в React Router v6.4+ — стандартний підхід. `popstate` + pushState — cross-version альтернатива
+
+---
+
+### [2026-05-22] Кнопка "Нічия" не робила нічого — відсутній draw offer flow
+
+- **Контекст:** `client/src/pages/GamePage.tsx`, `server/src/socket/handlers/game.handler.ts`, `shared/types/socket.types.ts`
+- **Симптом:** При натисканні "Нічия" в онлайн грі нічого не відбувалось — ні відповіді суперника, ні результату. Сервер не мав жодного обробника для drawOffer/Accept/Decline
+- **Причина (клієнт):** `handleDrawOffer` просто емітив `drawOffer` але не слухав відповідей суперника (`drawOffer` від сервера, `drawDeclined`). UI не мав ані модала прийняття пропозиції, ані toast про відхилення
+- **Причина (сервер):** `game.handler.ts` не мав обробників `drawOffer`, `drawAccept`, `drawDecline` — всі три події падали в пустоту. `ServerToClientEvents` не мав `drawDeclined`
+- **Рішення:** Додано `drawDeclined` до `ServerToClientEvents`. Сервер: модуль-рівень `Map<gameId, userId>` для pending offers; обробники `drawOffer` (forward до суперника), `drawAccept` (finalizeGame DRAW_AGREED), `drawDecline` (emit drawDeclined назад). Клієнт: слухачі `drawOffer` → show modal; `drawDeclined` → 3-секундний toast. Модальне вікно "Суперник пропонує нічию" з кнопками "Прийняти"/"Відхилити"
+- **Як уникнути:** Будь-яка клієнтська подія socket.emit без відповідного `socket.on(...)` на сервері — мертвий код. Завжди перевіряти двосторонній flow при реалізації socket features
+
+---
+
+### [2026-05-22] Складність ШІ незбалансована — EASY не робить помилок, HARD занадто повільний
+
+- **Контекст:** `server/src/ai/aiService.ts`, `server/src/ai/minimax.ts`
+- **Симптом:** EASY (depth=2) грав майже без помилок — minimax depth 2 вже досить сильний. HARD (depth=4) думав 2-8+ секунд на хід — блокував Node.js event loop, що уповільнювало весь сервер
+- **Причина:** Неправильно підібрані глибини. depth=2 з alpha-beta pruning і eval таблицями — вже відносно сильний рівень. depth=4 без обмеження часу — exponential growth (~b^4 вузлів)
+- **Рішення:** EASY: depth=1, 30% шанс випадкового легального ходу (симулює помилки початківця). MEDIUM: depth=2, без випадковості. HARD: depth=3 + time cap 5000ms (якщо minimax займає > 5с — повертає найкращий знайдений хід). Для time cap: `SearchState.deadline` перевіряється кожні 512 вузлів у `minimaxInner`, при спрацюванні `timedOut = true` → рання зупинка циклу
+- **Як уникнути:** Синхронний minimax на depth≥4 блокує event loop — тестувати час виконання на різних позиціях до деплою. Для production — Worker Thread або ітеративне поглиблення (iterative deepening) з time management
+
+---
+
+### [2026-05-22] Відсутні кнопки "Назад" на сторінках профіль/історія/лідерборд
+
+- **Контекст:** `client/src/pages/ProfilePage.tsx`, `client/src/pages/HistoryPage.tsx`, `client/src/pages/LeaderboardPage.tsx`
+- **Симптом:** Користувач не міг повернутись до лобі зі сторінок профілю, історії або лідерборду без використання браузерної кнопки назад — погана UX, особливо на мобільних де браузерна навігація може бути прихована
+- **Причина:** Сторінки не мали навігаційного елемента для повернення
+- **Рішення:** На кожну з трьох сторінок додано `<button onClick={() => navigate('/lobby')}>← Назад</button>` вгорі зліва, стиль `text-gray-400 hover:text-white`, без рамки, `bg-transparent`
+- **Як уникнути:** Кожна deep-link сторінка (profile, history, detail pages) повинна мати breadcrumb або back button — особливо на мобільних де жести назад ненадійні
+

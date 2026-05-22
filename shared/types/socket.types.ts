@@ -21,6 +21,7 @@ export interface ServerToClientEvents {
   gameEnd: (payload: GameEndPayload) => void;
   timeout: (payload: TimeoutPayload) => void;
   drawOffer: () => void;
+  drawDeclined: () => void;
   chatMessage: (payload: ChatBroadcastPayload) => void;
   opponentDisconnected: () => void;
   opponentReconnected: () => void;
