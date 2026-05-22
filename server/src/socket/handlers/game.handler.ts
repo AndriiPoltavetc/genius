@@ -103,6 +103,16 @@ export function registerGameHandlers(io: GeniusServer, socket: GeniusSocket): vo
 
       // If AI game and it's AI's turn (Black)
       if (state.isAiGame && state.turn === 'b' && state.aiLevel) {
+        const delayMs =
+          state.aiLevel === 'EASY'
+            ? 600 + Math.random() * 300
+            : state.aiLevel === 'MEDIUM'
+            ? 300 + Math.random() * 200
+            : 0;
+        if (delayMs > 0) {
+          await new Promise<void>((resolve) => { setTimeout(resolve, delayMs); });
+        }
+
         const aiResult = await getBestMove(chess.fen(), state.aiLevel);
 
         const currentFen = chess.fen();

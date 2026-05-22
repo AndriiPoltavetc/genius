@@ -125,10 +125,15 @@ export default function Chessboard({ gameId }: ChessboardProps) {
         const moves = chess.moves({ square, verbose: true });
         const highlights: SquareStyles = {};
         moves.forEach((m) => {
-          highlights[m.to] = {
-            background: 'radial-gradient(circle, #646f40 25%, transparent 25%)',
-            borderRadius: '50%',
-          };
+          const isCapture = m.flags.includes('c') || m.flags.includes('e');
+          const isCastle = m.flags.includes('k') || m.flags.includes('q');
+          if (isCastle) {
+            highlights[m.to] = { backgroundColor: 'rgba(0, 100, 200, 0.4)' };
+          } else if (isCapture) {
+            highlights[m.to] = { background: 'radial-gradient(circle, transparent 60%, rgba(20,85,30,0.5) 60%)' };
+          } else {
+            highlights[m.to] = { background: 'radial-gradient(circle, rgba(20,85,30,0.5) 25%, transparent 25%)' };
+          }
         });
         setMoveSquares(highlights);
       }
@@ -175,6 +180,8 @@ export default function Chessboard({ gameId }: ChessboardProps) {
 
   if (!gameState) return null;
 
+  const lastMove = gameState.moves.at(-1) ?? null;
+
   const checkStyles: SquareStyles = checkSquare
     ? { [checkSquare]: { backgroundColor: 'rgba(220, 38, 38, 0.7)' } }
     : {};
@@ -191,6 +198,10 @@ export default function Chessboard({ gameId }: ChessboardProps) {
           arePiecesDraggable={isMyTurn}
           customSquareStyles={{
             ...checkStyles,
+            ...(lastMove ? {
+              [lastMove.from]: { backgroundColor: 'rgba(255, 255, 0, 0.3)' },
+              [lastMove.to]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
+            } : {}),
             ...moveSquares,
             ...(selectedSquare ? { [selectedSquare]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' } } : {}),
           }}
