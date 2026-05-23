@@ -10,6 +10,7 @@ import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 import ProfilePage from './pages/ProfilePage';
 import HistoryPage from './pages/HistoryPage';
+import CheckersGamePage from './features/checkers/CheckersGamePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
@@ -63,6 +64,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkers/ai"
+        element={
+          <ProtectedRoute>
+            <CheckersGamePage mode="ai" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkers/online/:gameId"
+        element={
+          <ProtectedRoute>
+            <CheckersGamePage mode="online" />
           </ProtectedRoute>
         }
       />

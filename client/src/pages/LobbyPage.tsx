@@ -45,6 +45,7 @@ export default function LobbyPage() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAiLevel, setPendingAiLevel] = useState<AiLevel | null>(null);
+  const [gameType, setGameType] = useState<'chess' | 'checkers'>('chess');
 
   // Leaderboard
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -150,6 +151,64 @@ export default function LobbyPage() {
 
           {/* ── LEFT column: game modes ──────────────────────────────── */}
           <div className="space-y-4">
+            {/* Game type toggle */}
+            <div className="flex rounded-lg overflow-hidden border border-gray-700">
+              {(['chess', 'checkers'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => { setGameType(type); setPendingAiLevel(null); }}
+                  className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                    gameType === type
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {type === 'chess' ? '♟ Шахи' : '🔴 Шашки'}
+                </button>
+              ))}
+            </div>
+
+            {gameType === 'checkers' ? (
+              <>
+                {/* Checkers online */}
+                <div className="card">
+                  <h2 className="text-xl font-bold text-white mb-2">⚡ Шашки онлайн</h2>
+                  <p className="text-gray-400 text-sm mb-4">Матчмейкінг. Англійські шашки 8×8.</p>
+                  <motion.button
+                    onClick={() => void navigate('/checkers/online/search')}
+                    className="btn-primary w-full py-3 text-base"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    🔍 Знайти гру
+                  </motion.button>
+                </div>
+
+                {/* Checkers AI */}
+                <div className="card">
+                  <h2 className="text-xl font-bold text-white mb-2">🤖 Шашки проти ШІ</h2>
+                  <p className="text-gray-400 text-sm mb-4">Minimax Alpha-Beta. Не впливає на рейтинг.</p>
+                  <div className="space-y-2">
+                    {[
+                      { level: 'easy', label: '🟢 Легкий' },
+                      { level: 'medium', label: '🟡 Середній' },
+                      { level: 'hard', label: '🔴 Важкий' },
+                    ].map(({ level, label }) => (
+                      <motion.button
+                        key={level}
+                        onClick={() => void navigate(`/checkers/ai?difficulty=${level}`)}
+                        className="btn-secondary w-full text-left"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {label}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
             {/* Online Game */}
             <div className="card">
               <h2 className="text-xl font-bold text-white mb-2">⚡ Гра онлайн</h2>
@@ -233,6 +292,8 @@ export default function LobbyPage() {
                 </div>
               )}
             </div>
+              </>
+            )}
           </div>
 
           {/* ── RIGHT column: profile ────────────────────────────────── */}

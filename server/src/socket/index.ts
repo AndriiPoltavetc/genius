@@ -7,6 +7,7 @@ import { socketAuthMiddleware } from './middleware/socketAuth';
 import { registerGameHandlers } from './handlers/game.handler';
 import { registerChatHandlers } from './handlers/chat.handler';
 import { registerMatchmakingHandlers } from './handlers/matchmaking.handler';
+import { registerCheckersHandlers } from './checkers.handler';
 import { logger } from '../utils/logger';
 import { removeFromQueue } from '../modules/matchmaking/matchmaking.service';
 
@@ -30,6 +31,7 @@ export function initSocketIO(httpServer: HttpServer) {
     registerGameHandlers(io, socket);
     registerChatHandlers(io, socket);
     registerMatchmakingHandlers(io, socket);
+    registerCheckersHandlers(io, socket);
 
     socket.on('disconnect', async (reason) => {
       logger.info('Socket disconnected', { userId, reason });
