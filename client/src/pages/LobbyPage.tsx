@@ -178,6 +178,9 @@ export default function LobbyPage() {
             <p className="font-semibold text-white leading-tight" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username}</p>
             <p className="text-sm font-bold text-primary-400 leading-tight">
               {gameType === 'checkers' ? (profile?.checkersElo ?? 1200) : profile?.rating} ELO
+              <span className="text-xs font-normal text-gray-500 ml-1">
+                {gameType === 'checkers' ? '(шашки)' : '(шахи)'}
+              </span>
             </p>
           </div>
           <button
@@ -280,7 +283,7 @@ export default function LobbyPage() {
               <>
             {/* Online Game */}
             <div className="card">
-              <h2 className="text-xl font-bold text-white mb-2">⚡ Гра онлайн</h2>
+              <h2 className="text-xl font-bold text-white mb-2">⚡ Шахи онлайн</h2>
               <p className="text-gray-400 text-sm mb-4">
                 Матчмейкінг за рейтингом ELO. Часовий контроль 10+0.
               </p>
@@ -382,7 +385,9 @@ export default function LobbyPage() {
                 </p>
                 <p className="text-primary-400 font-bold text-lg">
                   {gameType === 'checkers' ? (profile?.checkersElo ?? 1200) : profile?.rating} ELO
-                  {gameType === 'checkers' && <span className="text-xs font-normal text-gray-500 ml-1">(шашки)</span>}
+                  <span className="text-xs font-normal text-gray-500 ml-1">
+                    {gameType === 'checkers' ? '(шашки)' : '(шахи)'}
+                  </span>
                 </p>
               </div>
             </div>

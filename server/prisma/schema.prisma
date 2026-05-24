@@ -17,11 +17,17 @@ model User {
   passwordHash String
   rating       Int      @default(1200)
   checkersElo  Int      @default(1200)
-  gamesPlayed  Int      @default(0)
-  gamesWon     Int      @default(0)
-  gamesLost    Int      @default(0)
-  gamesDrawn   Int      @default(0)
-  createdAt    DateTime @default(now())
+  gamesPlayed            Int      @default(0)
+  gamesWon               Int      @default(0)
+  gamesLost              Int      @default(0)
+  gamesDrawn             Int      @default(0)
+  checkersAiEasyPlayed   Int      @default(0)
+  checkersAiEasyWins     Int      @default(0)
+  checkersAiMediumPlayed Int      @default(0)
+  checkersAiMediumWins   Int      @default(0)
+  checkersAiHardPlayed   Int      @default(0)
+  checkersAiHardWins     Int      @default(0)
+  createdAt              DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   gamesAsWhite Game[]        @relation("WhitePlayer")

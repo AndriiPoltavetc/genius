@@ -67,7 +67,14 @@ export default function SettingsPanel() {
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Стиль фігур</h3>
         <div className="space-y-2">
           {PIECE_STYLES.map((p) => (
-            <label key={p.id} className="flex items-center gap-3 cursor-pointer group">
+            <label
+              key={p.id}
+              className={`flex items-center gap-3 cursor-pointer group rounded-lg px-2 py-1.5 -mx-2 transition-colors ${
+                pieces === p.id
+                  ? 'ring-2 ring-primary-500 bg-gray-800'
+                  : 'hover:bg-gray-800/50'
+              }`}
+            >
               <input
                 type="radio"
                 name="pieces"

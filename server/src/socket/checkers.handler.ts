@@ -30,7 +30,19 @@ function emitState(io: CheckersServer, gameId: string) {
 async function finalizeCheckersGame(state: CheckersGameState, winner: Color | 'draw'): Promise<void> {
   try {
     if (state.isAiGame) {
-      // AI games don't affect total stats or ELO — tracked separately via aiStats queries
+      const humanColor: Color = state.players.white !== 'AI' ? 'white' : 'black';
+      const humanId = humanColor === 'white' ? state.players.white : state.players.black;
+      if (!humanId || humanId === 'AI') return;
+      const difficulty = state.difficulty ?? 'easy';
+      const humanWon = winner === humanColor;
+      const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+      await prisma.user.update({
+        where: { id: humanId },
+        data: {
+          [`checkersAi${cap(difficulty)}Played`]: { increment: 1 },
+          ...(humanWon ? { [`checkersAi${cap(difficulty)}Wins`]: { increment: 1 } } : {}),
+        },
+      });
       return;
     } else {
       const whiteId = state.players.white;

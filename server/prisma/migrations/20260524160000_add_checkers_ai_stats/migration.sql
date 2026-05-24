@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN "checkersAiEasyPlayed"   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "checkersAiEasyWins"     INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "checkersAiMediumPlayed" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "checkersAiMediumWins"   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "checkersAiHardPlayed"   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "users" ADD COLUMN "checkersAiHardWins"     INTEGER NOT NULL DEFAULT 0;

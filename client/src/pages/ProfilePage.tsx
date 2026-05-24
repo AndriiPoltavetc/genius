@@ -235,7 +235,85 @@ function OwnSettingsView() {
           </div>
         </div>
 
-        {/* Section 2 — Game preferences */}
+        {/* Section 2 — Chess stats */}
+        <div className="card space-y-3">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Шахи</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-primary-400 font-bold text-lg">{user?.rating ?? 1200} ELO</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Партій', value: user?.chessGamesPlayed ?? user?.gamesPlayed ?? 0 },
+              { label: 'Перемог', value: user?.chessWins ?? user?.gamesWon ?? 0 },
+              { label: 'Поразок', value: user?.chessLosses ?? user?.gamesLost ?? 0 },
+              { label: 'Нічиїх', value: user?.chessDraws ?? user?.gamesDrawn ?? 0 },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-white">{value}</p>
+                <p className="text-xs text-gray-400">{label}</p>
+              </div>
+            ))}
+          </div>
+          {user?.aiStats && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Проти ШІ</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { label: 'Легкий', stats: user.aiStats.easy },
+                  { label: 'Середній', stats: user.aiStats.medium },
+                  { label: 'Важкий', stats: user.aiStats.hard },
+                ] as const).map(({ label, stats }) => (
+                  <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                    <p className="text-xs text-gray-400">{label}</p>
+                    <p className="text-sm font-bold text-white">{stats.played} ігор</p>
+                    <p className="text-xs text-gray-500">{stats.wins} пер.</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 3 — Checkers stats */}
+        <div className="card space-y-3">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Шашки</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-primary-400 font-bold text-lg">{user?.checkersElo ?? 1200} ELO</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Партій', value: user?.checkersGamesPlayed ?? 0 },
+              { label: 'Перемог', value: user?.checkersWins ?? 0 },
+              { label: 'Поразок', value: user?.checkersLosses ?? 0 },
+              { label: 'Нічиїх', value: user?.checkersDraws ?? 0 },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-white">{value}</p>
+                <p className="text-xs text-gray-400">{label}</p>
+              </div>
+            ))}
+          </div>
+          {user?.checkersAiStats && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2">Проти ШІ</p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { label: 'Легкий', stats: user.checkersAiStats.easy },
+                  { label: 'Середній', stats: user.checkersAiStats.medium },
+                  { label: 'Важкий', stats: user.checkersAiStats.hard },
+                ] as const).map(({ label, stats }) => (
+                  <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                    <p className="text-xs text-gray-400">{label}</p>
+                    <p className="text-sm font-bold text-white">{stats.played} ігор</p>
+                    <p className="text-xs text-gray-500">{stats.wins} пер.</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 4 — Game preferences */}
         <div className="card space-y-5">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Уподобання гри</h2>
 

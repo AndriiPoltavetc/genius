@@ -45,6 +45,12 @@ userRoutes.get('/:userId', async (req, res, next) => {
           gamesWon: true,
           gamesLost: true,
           gamesDrawn: true,
+          checkersAiEasyPlayed: true,
+          checkersAiEasyWins: true,
+          checkersAiMediumPlayed: true,
+          checkersAiMediumWins: true,
+          checkersAiHardPlayed: true,
+          checkersAiHardWins: true,
           createdAt: true,
         },
       }),
@@ -82,7 +88,11 @@ userRoutes.get('/:userId', async (req, res, next) => {
       }
     }
 
-    const emptyStats = { played: 0, wins: 0 };
+    const checkersGamesPlayed = Math.max(0, (user.gamesPlayed) - chessGamesPlayed);
+    const checkersWins = Math.max(0, (user.gamesWon) - chessWins);
+    const checkersLosses = Math.max(0, (user.gamesLost) - chessLosses);
+    const checkersDraws = Math.max(0, (user.gamesDrawn) - chessDraws);
+
     res.json({
       ...user,
       aiStats,
@@ -90,11 +100,15 @@ userRoutes.get('/:userId', async (req, res, next) => {
       chessWins,
       chessLosses,
       chessDraws,
-      checkersGamesPlayed: 0,
-      checkersWins: 0,
-      checkersLosses: 0,
-      checkersDraws: 0,
-      checkersAiStats: { easy: emptyStats, medium: emptyStats, hard: emptyStats },
+      checkersGamesPlayed,
+      checkersWins,
+      checkersLosses,
+      checkersDraws,
+      checkersAiStats: {
+        easy: { played: user.checkersAiEasyPlayed, wins: user.checkersAiEasyWins },
+        medium: { played: user.checkersAiMediumPlayed, wins: user.checkersAiMediumWins },
+        hard: { played: user.checkersAiHardPlayed, wins: user.checkersAiHardWins },
+      },
     });
   } catch (err) {
     next(err);

@@ -42,19 +42,16 @@ function findCaptures(
   const dirs = pieceType === 'king'
     ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
     : color === 'white'
-      ? [[-1, -1], [-1, 1]]        // white moves up (row decreases)
-      : [[1, -1], [1, 1]];          // black moves down (row increases)
+      ? [[-1, -1], [-1, 1]]
+      : [[1, -1], [1, 1]];
 
-  // For kings, also look backwards
-  const allDirs = pieceType === 'king'
-    ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
-    : [[-1, -1], [-1, 1], [1, -1], [1, 1]]; // men can capture in all dirs
+  const allDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
 
   const opp = opponent(color);
   const results: CheckersMove[] = [];
 
   if (pieceType === 'man') {
-    for (const [dr, dc] of allDirs) {
+    for (const [dr, dc] of dirs) {
       const mr = row + dr;
       const mc = col + dc;
       const lr = row + 2 * dr;
@@ -79,7 +76,13 @@ function findCaptures(
       if (becomesKing) newBoard[lr][lc] = { type: 'king', color };
 
       const newCaptured = [...capturedSoFar, [mr, mc] as [number, number]];
-      const further = findCaptures(newBoard, lr, lc, color, newPieceType, newCaptured, visitedSquares);
+
+      if (becomesKing) {
+        results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured, path: [] });
+        continue;
+      }
+
+      const further = findCaptures(newBoard, lr, lc, color, pieceType, newCaptured, visitedSquares);
 
       if (further.length === 0) {
         results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured, path: [] });
