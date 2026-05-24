@@ -24,14 +24,19 @@ interface GameHistoryItem {
 export default function HistoryPage() {
   const user = useAppSelector((s) => s.auth.user);
   const token = useAppSelector((s) => s.auth.accessToken);
+  const [activeTab, setActiveTab] = useState<'chess' | 'checkers'>('chess');
   const [games, setGames] = useState<GameHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch(`${import.meta.env['VITE_API_URL'] as string}/api/games/history`, {
-      headers: { Authorization: `Bearer ${token ?? ''}` },
-    })
+    setLoading(true);
+    setError(null);
+    const gameType = activeTab === 'checkers' ? 'CHECKERS' : 'CHESS';
+    void fetch(
+      `${import.meta.env['VITE_API_URL'] as string}/api/games/history?gameType=${gameType}`,
+      { headers: { Authorization: `Bearer ${token ?? ''}` } },
+    )
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -45,7 +50,7 @@ export default function HistoryPage() {
         setError('Не вдалося завантажити історію партій.');
         setLoading(false);
       });
-  }, [token]);
+  }, [token, activeTab]);
 
   const getResultLabel = (game: GameHistoryItem): { label: string; color: string } => {
     const isWhite = game.whitePlayer?.id === user?.id;
@@ -68,6 +73,21 @@ export default function HistoryPage() {
       <div className="flex-1 px-4 py-8">
       <div className="max-w-3xl mx-auto">
 
+        {/* Game type tabs */}
+        <div className="flex rounded-lg overflow-hidden border border-gray-700 mb-6">
+          {(['chess', 'checkers'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                activeTab === tab ? 'btn-primary' : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {tab === 'chess' ? '♟ Шахи' : '🔴 Шашки'}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <p className="text-gray-400">Завантаження...</p>
         ) : error ? (
@@ -77,8 +97,17 @@ export default function HistoryPage() {
           </div>
         ) : games.length === 0 ? (
           <div className="card text-center">
-            <p className="text-gray-400">Ви ще не зіграли жодної партії.</p>
-            <Link to="/lobby" className="btn-primary mt-4 inline-block">Зіграти першу гру</Link>
+            <p className="text-gray-400">
+              {activeTab === 'checkers'
+                ? 'Ви ще не зіграли жодної партії в шашки.'
+                : 'Ви ще не зіграли жодної партії.'}
+            </p>
+            <Link
+              to={`/lobby?game=${activeTab}`}
+              className="btn-primary mt-4 inline-block"
+            >
+              Зіграти першу гру
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">

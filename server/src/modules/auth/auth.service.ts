@@ -43,9 +43,9 @@ export async function register(dto: RegisterDto): Promise<AuthResponse> {
   });
 
   if (existing) {
-    const field = existing.email === dto.email ? 'email' : 'username';
-    logger.warn('Register conflict', { field, email: dto.email, username: dto.username });
-    throw new AppError(409, `User with this ${field} already exists`);
+    const isEmailConflict = existing.email === dto.email;
+    logger.warn('Register conflict', { field: isEmailConflict ? 'email' : 'username', email: dto.email, username: dto.username });
+    throw new AppError(409, isEmailConflict ? 'Користувач з таким email вже існує' : 'Нікнейм вже зайнятий');
   }
 
   const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);

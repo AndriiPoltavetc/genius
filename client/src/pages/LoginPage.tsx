@@ -43,6 +43,7 @@ export default function LoginPage() {
             <input
               type="email"
               className="input-field"
+              style={{ fontSize: '16px' }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -53,6 +54,7 @@ export default function LoginPage() {
             <input
               type="password"
               className="input-field"
+              style={{ fontSize: '16px' }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

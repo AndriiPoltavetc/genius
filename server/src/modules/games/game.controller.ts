@@ -16,7 +16,8 @@ export async function getHistoryHandler(req: AuthRequest, res: Response, next: N
     const userId = (req as any).user?.userId as string;
     const page = Number((req as any).query?.['page'] ?? 1);
     const limit = Number((req as any).query?.['limit'] ?? 20);
-    const result = await gameService.getGameHistory(userId, page, limit);
+    const gameType = (req as any).query?.['gameType'] as string | undefined;
+    const result = await gameService.getGameHistory(userId, page, limit, gameType);
     res.json(result);
   } catch (err) {
     next(err);

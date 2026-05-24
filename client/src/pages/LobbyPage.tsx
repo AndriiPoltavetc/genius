@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import SettingsPanel from '../components/SettingsPanel';
 import { motion } from 'framer-motion';
@@ -40,14 +40,27 @@ export default function LobbyPage() {
 
   // Single source of truth: fresh data when available, cached otherwise
   const profile = profileData ?? user;
-  const winRate = profile && profile.gamesPlayed > 0
-    ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100)
-    : 0;
 
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAiLevel, setPendingAiLevel] = useState<AiLevel | null>(null);
+  const [isCheckersSearching, setIsCheckersSearching] = useState(false);
   const initialGame = (searchParams.get('game') as 'chess' | 'checkers' | null) ?? 'chess';
   const [gameType, setGameType] = useState<'chess' | 'checkers'>(initialGame);
+  const checkersStartedRef = useRef(false);
+
+  const modePlayed = gameType === 'checkers'
+    ? (profile?.checkersGamesPlayed ?? 0)
+    : (profile?.chessGamesPlayed ?? profile?.gamesPlayed ?? 0);
+  const modeWins = gameType === 'checkers'
+    ? (profile?.checkersWins ?? 0)
+    : (profile?.chessWins ?? profile?.gamesWon ?? 0);
+  const modeLosses = gameType === 'checkers'
+    ? (profile?.checkersLosses ?? 0)
+    : (profile?.chessLosses ?? profile?.gamesLost ?? 0);
+  const modeDraws = gameType === 'checkers'
+    ? (profile?.checkersDraws ?? 0)
+    : (profile?.chessDraws ?? profile?.gamesDrawn ?? 0);
+  const winRate = modePlayed > 0 ? Math.round((modeWins / modePlayed) * 100) : 0;
 
   // Leaderboard
   const [leaderboardTab, setLeaderboardTab] = useState<'chess' | 'checkers'>(initialGame);
@@ -117,6 +130,26 @@ export default function LobbyPage() {
     dispatch(searchCancelled());
   };
 
+  const searchCheckersGame = () => {
+    const socket = getSocket();
+    socket.off('checkers:started');
+    checkersStartedRef.current = false;
+    setIsCheckersSearching(true);
+    socket.emit('checkers:joinQueue');
+    socket.once('checkers:started', (data) => {
+      if (checkersStartedRef.current) return;
+      checkersStartedRef.current = true;
+      setIsCheckersSearching(false);
+      void navigate(`/checkers/online/${data.gameId}`, { state: { gameData: data } });
+    });
+  };
+
+  const cancelCheckersSearch = () => {
+    getSocket().emit('checkers:leaveQueue');
+    setIsCheckersSearching(false);
+    getSocket().off('checkers:started');
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
       {showSettings && (
@@ -142,7 +175,7 @@ export default function LobbyPage() {
         <span className="text-2xl font-bold text-primary-400 tracking-tight">Genius</span>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="font-semibold text-white leading-tight">{user?.username}</p>
+            <p className="font-semibold text-white leading-tight" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username}</p>
             <p className="text-sm font-bold text-primary-400 leading-tight">{user?.rating} ELO</p>
           </div>
           <button
@@ -186,21 +219,41 @@ export default function LobbyPage() {
                 {/* Checkers online */}
                 <div className="card">
                   <h2 className="text-xl font-bold text-white mb-2">⚡ Шашки онлайн</h2>
-                  <p className="text-gray-400 text-sm mb-4">Матчмейкінг. Англійські шашки 8×8.</p>
-                  <motion.button
-                    onClick={() => void navigate('/checkers/online/search')}
-                    className="btn-primary w-full py-3 text-base"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    🔍 Знайти гру
-                  </motion.button>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Матчмейкінг за рейтингом ELO. Часовий контроль 10+0.
+                  </p>
+                  {isCheckersSearching ? (
+                    <div className="text-center">
+                      <motion.div
+                        className="text-4xl mb-3"
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                      >
+                        🔴
+                      </motion.div>
+                      <p className="text-gray-400 mb-3 text-sm">Шукаємо суперника...</p>
+                      <button onClick={cancelCheckersSearch} className="btn-secondary w-full text-sm">
+                        Скасувати
+                      </button>
+                    </div>
+                  ) : (
+                    <motion.button
+                      onClick={searchCheckersGame}
+                      className="btn-primary w-full py-3 text-base"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      🔍 Знайти гру
+                    </motion.button>
+                  )}
                 </div>
 
                 {/* Checkers AI */}
                 <div className="card">
                   <h2 className="text-xl font-bold text-white mb-2">🤖 Шашки проти ШІ</h2>
-                  <p className="text-gray-400 text-sm mb-4">Minimax Alpha-Beta. Не впливає на рейтинг.</p>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Minimax + Alpha-Beta, три рівні. Не впливає на рейтинг.
+                  </p>
                   <div className="space-y-2">
                     {[
                       { level: 'easy', label: '🟢 Легкий', description: 'Випадкові помилки', depth: 1 },
@@ -335,10 +388,10 @@ export default function LobbyPage() {
             {/* Stats grid */}
             <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'Партій', value: profile?.gamesPlayed ?? 0 },
-                { label: 'Перемог', value: profile?.gamesWon ?? 0 },
-                { label: 'Поразок', value: profile?.gamesLost ?? 0 },
-                { label: 'Нічиїх', value: profile?.gamesDrawn ?? 0 },
+                { label: 'Партій', value: modePlayed },
+                { label: 'Перемог', value: modeWins },
+                { label: 'Поразок', value: modeLosses },
+                { label: 'Нічиїх', value: modeDraws },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
                   <p className="text-lg font-bold text-white">{value}</p>
@@ -424,7 +477,8 @@ export default function LobbyPage() {
             <p className="text-gray-400">Немає даних.</p>
           ) : (
             <div className="card p-0 overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto w-full">
+              <table className="min-w-full text-sm">
                 <thead className="bg-gray-800">
                   <tr>
                     <th className="px-4 py-3 text-left text-gray-400">#</th>
@@ -455,6 +509,7 @@ export default function LobbyPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

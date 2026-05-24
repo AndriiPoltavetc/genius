@@ -30,6 +30,14 @@ export interface UserPublic {
     medium: AiLevelStats;
     hard: AiLevelStats;
   };
+  chessGamesPlayed?: number;
+  chessWins?: number;
+  chessLosses?: number;
+  chessDraws?: number;
+  checkersGamesPlayed?: number;
+  checkersWins?: number;
+  checkersLosses?: number;
+  checkersDraws?: number;
 }
 
 export interface AuthTokenPayload {

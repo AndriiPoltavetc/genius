@@ -63,9 +63,50 @@ function PublicProfileView({ userId }: { userId: string }) {
           <p className="text-white font-bold mt-1">{winRate}%</p>
         </div>
 
+        {/* Per-game-mode breakdown */}
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-400 mb-3">Шахи</h3>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-primary-400 font-bold text-lg">{user.rating} ELO</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Партій', value: user.chessGamesPlayed ?? user.gamesPlayed },
+              { label: 'Перемог', value: user.chessWins ?? user.gamesWon },
+              { label: 'Поразок', value: user.chessLosses ?? user.gamesLost },
+              { label: 'Нічиїх', value: user.chessDraws ?? user.gamesDrawn },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-white">{value}</p>
+                <p className="text-xs text-gray-400">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-400 mb-3">Шашки</h3>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-primary-400 font-bold text-lg">{user.checkersElo} ELO</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: 'Партій', value: user.checkersGamesPlayed ?? 0 },
+              { label: 'Перемог', value: user.checkersWins ?? 0 },
+              { label: 'Поразок', value: user.checkersLosses ?? 0 },
+              { label: 'Нічиїх', value: user.checkersDraws ?? 0 },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-white">{value}</p>
+                <p className="text-xs text-gray-400">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {user.aiStats && (
           <div className="card">
-            <h3 className="text-sm font-semibold text-gray-400 mb-3">Статистика проти ШІ</h3>
+            <h3 className="text-sm font-semibold text-gray-400 mb-3">Статистика проти ШІ (шахи)</h3>
             <div className="grid grid-cols-3 gap-3">
               {([
                 { label: 'Легкий', stats: user.aiStats.easy },
@@ -184,8 +225,12 @@ function OwnSettingsView() {
 
           <div className="flex items-center justify-between pt-1 border-t border-gray-800">
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Рейтинг</p>
+              <p className="text-xs text-gray-400 mb-0.5">Шахи ELO</p>
               <p className="text-primary-400 font-bold text-lg">{user?.rating} ELO</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-400 mb-0.5">Шашки ELO</p>
+              <p className="text-primary-400 font-bold text-lg">{user?.checkersElo ?? 1200} ELO</p>
             </div>
           </div>
         </div>

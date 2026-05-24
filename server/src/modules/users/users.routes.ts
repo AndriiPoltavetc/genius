@@ -33,7 +33,7 @@ userRoutes.get('/:userId', async (req, res, next) => {
   try {
     const userId = req.params['userId'] as string;
 
-    const [user, aiGames] = await Promise.all([
+    const [user, allChessGames] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -51,10 +51,9 @@ userRoutes.get('/:userId', async (req, res, next) => {
       prisma.game.findMany({
         where: {
           OR: [{ whitePlayerId: userId }, { blackPlayerId: userId }],
-          isAiGame: true,
           endedAt: { not: null },
         },
-        select: { aiLevel: true, result: true, whitePlayerId: true },
+        select: { aiLevel: true, result: true, whitePlayerId: true, isAiGame: true },
       }),
     ]);
 
@@ -65,17 +64,36 @@ userRoutes.get('/:userId', async (req, res, next) => {
       medium: { played: 0, wins: 0 },
       hard: { played: 0, wins: 0 },
     };
-    for (const game of aiGames) {
-      if (!game.aiLevel) continue;
-      const lvl = game.aiLevel.toLowerCase() as 'easy' | 'medium' | 'hard';
-      aiStats[lvl].played++;
+    let chessGamesPlayed = 0, chessWins = 0, chessLosses = 0, chessDraws = 0;
+
+    for (const game of allChessGames) {
       const isWhite = game.whitePlayerId === userId;
-      if ((isWhite && game.result === 'WHITE_WIN') || (!isWhite && game.result === 'BLACK_WIN')) {
-        aiStats[lvl].wins++;
+      chessGamesPlayed++;
+      if (game.result === 'DRAW') chessDraws++;
+      else if ((isWhite && game.result === 'WHITE_WIN') || (!isWhite && game.result === 'BLACK_WIN')) chessWins++;
+      else chessLosses++;
+
+      if (game.isAiGame && game.aiLevel) {
+        const lvl = game.aiLevel.toLowerCase() as 'easy' | 'medium' | 'hard';
+        aiStats[lvl].played++;
+        if ((isWhite && game.result === 'WHITE_WIN') || (!isWhite && game.result === 'BLACK_WIN')) {
+          aiStats[lvl].wins++;
+        }
       }
     }
 
-    res.json({ ...user, aiStats });
+    res.json({
+      ...user,
+      aiStats,
+      chessGamesPlayed,
+      chessWins,
+      chessLosses,
+      chessDraws,
+      checkersGamesPlayed: 0,
+      checkersWins: 0,
+      checkersLosses: 0,
+      checkersDraws: 0,
+    });
   } catch (err) {
     next(err);
   }

@@ -201,14 +201,18 @@ export async function finalizeGame(
   }
 }
 
-export async function getGameHistory(userId: string, page = 1, limit = 20) {
+export async function getGameHistory(userId: string, page = 1, limit = 20, gameType?: string) {
+  // All games in the Game table are chess; checkers are tracked separately
+  if (gameType === 'CHECKERS') return { games: [], total: 0, page, limit };
+
   const skip = (page - 1) * limit;
+  const where = {
+    OR: [{ whitePlayerId: userId }, { blackPlayerId: userId }],
+    endedAt: { not: null },
+  };
   const [games, total] = await Promise.all([
     prisma.game.findMany({
-      where: {
-        OR: [{ whitePlayerId: userId }, { blackPlayerId: userId }],
-        endedAt: { not: null },
-      },
+      where,
       orderBy: { startedAt: 'desc' },
       skip,
       take: limit,
@@ -218,12 +222,7 @@ export async function getGameHistory(userId: string, page = 1, limit = 20) {
         _count: { select: { moves: true } },
       },
     }),
-    prisma.game.count({
-      where: {
-        OR: [{ whitePlayerId: userId }, { blackPlayerId: userId }],
-        endedAt: { not: null },
-      },
-    }),
+    prisma.game.count({ where }),
   ]);
 
   return { games, total, page, limit };

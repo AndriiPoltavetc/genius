@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import { getSocket } from '../game/socket';
@@ -17,7 +17,10 @@ interface CheckersGamePageProps {
 export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const user = useAppSelector((s) => s.auth.user);
+  // Pre-loaded game data passed from LobbyPage inline matchmaking
+  const preloadedGame = (location.state as { gameData?: { gameId: string; playerColor: string; state: CheckersBoardState } } | null)?.gameData;
 
   const difficulty = (searchParams.get('difficulty') ?? 'medium') as 'easy' | 'medium' | 'hard';
 
@@ -26,7 +29,8 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
   const [state, setState] = useState<CheckersBoardState | null>(null);
   const [showResignModal, setShowResignModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showPanel, setShowPanel] = useState(true);
+  const [showPanel, setShowPanel] = useState(false);
+  const [boardWidth, setBoardWidth] = useState(() => Math.min(window.innerWidth - 16, 560));
   const [isSearching, setIsSearching] = useState(mode === 'online');
   const [gameOver, setGameOver] = useState<{ winner: Color | 'draw'; reason?: string } | null>(null);
 
@@ -39,10 +43,21 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
   }, [moveHistory.length]);
 
   useEffect(() => {
+    const updateSize = () => setBoardWidth(Math.min(window.innerWidth - 16, 560));
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  useEffect(() => {
     const socket = getSocket();
 
     if (mode === 'ai') {
       socket.emit('checkers:startAi', { difficulty, color: 'white' });
+    } else if (preloadedGame) {
+      setGameId(preloadedGame.gameId);
+      setPlayerColor(preloadedGame.playerColor as Color);
+      setState(preloadedGame.state);
+      setIsSearching(false);
     } else {
       socket.emit('checkers:joinQueue');
     }
@@ -241,9 +256,9 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {/* Board */}
-        <div className="flex flex-col items-center justify-center flex-1 p-4 min-w-0">
+        <div className="flex flex-col items-center justify-center flex-1 p-2 md:p-4 min-w-0">
           <div className={`mb-3 text-sm font-semibold px-3 py-1 rounded-full ${
             isMyTurn ? 'bg-primary-600 text-white' : 'bg-gray-800 text-gray-400'
           }`}>
@@ -260,12 +275,13 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
             lastMove={state.lastMove}
             isGameOver={state.isOver || !!gameOver}
             onMove={handleMove}
+            size={boardWidth}
           />
         </div>
 
         {/* Side panel: move history */}
         {showPanel && (
-          <div className="flex flex-col bg-gray-900 border-l border-gray-800 flex-shrink-0 overflow-hidden" style={{ width: '200px' }}>
+          <div className="flex flex-col bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800 flex-shrink-0 overflow-hidden w-full md:w-[200px] max-h-40 md:max-h-none">
             <div className="px-3 py-2 border-b border-gray-800 flex-shrink-0">
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ходи</span>
             </div>

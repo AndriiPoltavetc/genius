@@ -28,7 +28,7 @@ export default function RegisterPage() {
       void navigate('/lobby');
     } catch (err) {
       const apiError = err as { status?: number; data?: { error?: string } };
-      if (import.meta.env.DEV && apiError?.data?.error) {
+      if (apiError?.data?.error && (apiError.status ?? 500) < 500) {
         setError(apiError.data.error);
       } else {
         setError(t('auth.registerError'));
@@ -50,6 +50,7 @@ export default function RegisterPage() {
             <input
               type="email"
               className="input-field"
+              style={{ fontSize: '16px' }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -60,6 +61,7 @@ export default function RegisterPage() {
             <input
               type="text"
               className="input-field"
+              style={{ fontSize: '16px' }}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               minLength={3}
@@ -72,6 +74,7 @@ export default function RegisterPage() {
             <input
               type="password"
               className="input-field"
+              style={{ fontSize: '16px' }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={8}

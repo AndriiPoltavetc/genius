@@ -26,6 +26,7 @@ interface CheckersBoardProps {
   lastMove: CheckersMove | null;
   isGameOver: boolean;
   onMove: (move: CheckersMove) => void;
+  size?: number;
 }
 
 const LIGHT_SQ = '#f0d9b5';
@@ -45,6 +46,11 @@ function getMoveHighlight(theme: string): string {
 }
 
 
+interface CaptureProgress {
+  candidates: ValidMove[];
+  stepIndex: number;
+}
+
 export default function CheckersBoard({
   board,
   playerColor,
@@ -53,8 +59,10 @@ export default function CheckersBoard({
   lastMove,
   isGameOver,
   onMove,
+  size,
 }: CheckersBoardProps) {
   const [selected, setSelected] = useState<[number, number] | null>(null);
+  const [captureProgress, setCaptureProgress] = useState<CaptureProgress | null>(null);
   const [moveTrail, setMoveTrail] = useState<[number, number][]>([]);
 
   const [pieceStyle, setPieceStyle] = useState(
@@ -86,6 +94,12 @@ export default function CheckersBoard({
     return () => observer.disconnect();
   }, []);
 
+  // Reset capture progress when the board state changes (new move received)
+  useEffect(() => {
+    setCaptureProgress(null);
+    setSelected(null);
+  }, [board]);
+
   // Show multi-capture trail briefly after each move
   useEffect(() => {
     const path = lastMove?.path;
@@ -103,15 +117,32 @@ export default function CheckersBoard({
   const reachable = new Map<string, ValidMove>();
   const capturable = new Set<string>();
 
-  // Highlight ALL capturable enemy pieces (not just from selected piece)
-  for (const m of validMoves) {
-    for (const [cr, cc] of m.captures) capturable.add(`${cr},${cc}`);
-  }
-
-  if (selected) {
+  if (captureProgress) {
+    // Step-by-step multi-capture: show only current step's destination and captures
+    const { candidates, stepIndex } = captureProgress;
+    for (const m of candidates) {
+      const stop = stepIndex < (m.path?.length ?? 0) ? m.path![stepIndex] : m.to;
+      reachable.set(`${stop[0]},${stop[1]}`, m);
+    }
+    for (const m of candidates) {
+      if (m.captures[stepIndex]) {
+        const [cr, cc] = m.captures[stepIndex];
+        capturable.add(`${cr},${cc}`);
+      }
+    }
+  } else {
+    // Normal mode: show first-step captures as red rings
     for (const m of validMoves) {
-      if (m.from[0] === selected[0] && m.from[1] === selected[1]) {
-        reachable.set(`${m.to[0]},${m.to[1]}`, m);
+      if (m.captures.length > 0) {
+        const [cr, cc] = m.captures[0];
+        capturable.add(`${cr},${cc}`);
+      }
+    }
+    if (selected) {
+      for (const m of validMoves) {
+        if (m.from[0] === selected[0] && m.from[1] === selected[1]) {
+          reachable.set(`${m.to[0]},${m.to[1]}`, m);
+        }
       }
     }
   }
@@ -122,6 +153,26 @@ export default function CheckersBoard({
       const piece = board[row][col];
       const sqKey = `${row},${col}`;
 
+      // ── Mid-capture step handling ────────────────────────────────────
+      if (captureProgress) {
+        if (reachable.has(sqKey)) {
+          const { candidates, stepIndex } = captureProgress;
+          const nextCandidates = candidates.filter((m) => {
+            const stop = stepIndex < (m.path?.length ?? 0) ? m.path![stepIndex] : m.to;
+            return stop[0] === row && stop[1] === col;
+          });
+          if (nextCandidates.length === 0) { setCaptureProgress(null); setSelected(null); return; }
+          // A candidate is "done" when clicked square is its final destination
+          const done = nextCandidates.find((m) => stepIndex >= (m.path?.length ?? 0));
+          if (done) { setCaptureProgress(null); setSelected(null); onMove(done); return; }
+          setCaptureProgress({ candidates: nextCandidates, stepIndex: stepIndex + 1 });
+        } else {
+          setCaptureProgress(null); setSelected(null);
+        }
+        return;
+      }
+
+      // ── Normal click ─────────────────────────────────────────────────
       if (selected && reachable.has(sqKey)) {
         const move = reachable.get(sqKey)!;
         setSelected(null);
@@ -130,16 +181,22 @@ export default function CheckersBoard({
       }
 
       if (piece && piece.color === playerColor) {
-        const hasMoves = validMoves.some((m) => m.from[0] === row && m.from[1] === col);
-        if (hasMoves) {
+        const movesFromHere = validMoves.filter((m) => m.from[0] === row && m.from[1] === col);
+        if (movesFromHere.length > 0) {
           setSelected([row, col]);
+          if (movesFromHere.some((m) => (m.path?.length ?? 0) > 0)) {
+            setCaptureProgress({ candidates: movesFromHere, stepIndex: 0 });
+          } else {
+            setCaptureProgress(null);
+          }
           return;
         }
       }
 
       setSelected(null);
+      setCaptureProgress(null);
     },
-    [isMyTurn, selected, reachable, board, playerColor, validMoves, onMove],
+    [isMyTurn, selected, captureProgress, reachable, board, playerColor, validMoves, onMove],
   );
 
   const rows = playerColor === 'white' ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
@@ -150,7 +207,7 @@ export default function CheckersBoard({
       style={{
         display: 'inline-grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
-        width: 'min(90vmin, 560px)',
+        width: size ? `${size}px` : 'min(calc(100vw - 16px), 560px)',
         aspectRatio: '1',
         borderRadius: '4px',
         overflow: 'hidden',
@@ -185,7 +242,9 @@ export default function CheckersBoard({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: isMyTurn && (piece?.color === playerColor || isReachable) ? 'pointer' : 'default',
+                cursor: captureProgress
+                  ? (isReachable ? 'pointer' : 'not-allowed')
+                  : isMyTurn && (piece?.color === playerColor || isReachable) ? 'pointer' : 'default',
                 position: 'relative',
               }}
             >

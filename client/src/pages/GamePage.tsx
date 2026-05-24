@@ -228,26 +228,44 @@ export default function GamePage() {
           }}
         />
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Board column */}
-          <div className="flex flex-col items-center justify-center flex-1 p-4 gap-3 min-w-0">
+          <div className="flex flex-col items-center justify-center flex-1 p-2 md:p-4 gap-3 min-w-0">
             <Chessboard gameId={gameState.id} />
           </div>
 
-          {/* Side panel with slide animation */}
+          {/* Side panel — horizontal slide on desktop, vertical expand on mobile */}
           <div
+            className="md:flex-shrink-0"
             style={{
-              width: showPanel ? '280px' : '0px',
-              transition: 'width 300ms ease',
               overflow: 'hidden',
               flexShrink: 0,
             }}
           >
-            <SidePanel
-              moves={gameState.moves}
-              activeTab={sidePanelTab}
-              onTabChange={setSidePanelTab}
-            />
+            <div
+              style={{
+                width: showPanel ? '280px' : '0px',
+                transition: 'width 300ms ease',
+                overflow: 'hidden',
+                height: '100%',
+              }}
+              className="hidden md:block"
+            >
+              <SidePanel
+                moves={gameState.moves}
+                activeTab={sidePanelTab}
+                onTabChange={setSidePanelTab}
+              />
+            </div>
+            {showPanel && (
+              <div className="md:hidden w-full max-h-40 overflow-hidden border-t border-gray-800">
+                <SidePanel
+                  moves={gameState.moves}
+                  activeTab={sidePanelTab}
+                  onTabChange={setSidePanelTab}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
