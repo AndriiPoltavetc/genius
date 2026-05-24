@@ -6,6 +6,7 @@ export type CheckersMove = {
   from: [number, number];
   to: [number, number];
   captures: [number, number][];
+  path: [number, number][];
 };
 
 export function createInitialBoard(): Board {
@@ -81,9 +82,9 @@ function findCaptures(
       const further = findCaptures(newBoard, lr, lc, color, newPieceType, newCaptured, visitedSquares);
 
       if (further.length === 0) {
-        results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured });
+        results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured, path: [] });
       } else {
-        results.push(...further.map((m) => ({ from: [row, col] as [number, number], to: m.to, captures: m.captures })));
+        results.push(...further.map((m) => ({ from: [row, col] as [number, number], to: m.to, captures: m.captures, path: [[lr, lc] as [number, number], ...m.path] })));
       }
     }
   } else {
@@ -120,9 +121,9 @@ function findCaptures(
         const further = findCaptures(newBoard, lr, lc, color, 'king', newCaptured, visitedSquares);
 
         if (further.length === 0) {
-          results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured });
+          results.push({ from: [row, col] as [number, number], to: [lr, lc] as [number, number], captures: newCaptured, path: [] });
         } else {
-          results.push(...further.map((m) => ({ from: [row, col] as [number, number], to: m.to, captures: m.captures })));
+          results.push(...further.map((m) => ({ from: [row, col] as [number, number], to: m.to, captures: m.captures, path: [[lr, lc] as [number, number], ...m.path] })));
         }
 
         lr += dr;
@@ -154,7 +155,7 @@ export function getValidMoves(board: Board, color: Color): CheckersMove[] {
           const nr = row + dr;
           const nc = col + dc;
           if (inBounds(nr, nc) && board[nr][nc] === null) {
-            quietMoves.push({ from: [row, col], to: [nr, nc], captures: [] });
+            quietMoves.push({ from: [row, col], to: [nr, nc], captures: [], path: [] });
           }
         }
       } else {
@@ -163,7 +164,7 @@ export function getValidMoves(board: Board, color: Color): CheckersMove[] {
           let nr = row + dr;
           let nc = col + dc;
           while (inBounds(nr, nc) && board[nr][nc] === null) {
-            quietMoves.push({ from: [row, col], to: [nr, nc], captures: [] });
+            quietMoves.push({ from: [row, col], to: [nr, nc], captures: [], path: [] });
             nr += dr;
             nc += dc;
           }

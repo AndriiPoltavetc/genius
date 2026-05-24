@@ -56,16 +56,20 @@ export default function LobbyPage() {
   useEffect(() => {
     const base = import.meta.env['VITE_API_URL'] as string;
     setLeaderboardLoading(true);
-    void Promise.all([
-      fetch(`${base}/api/leaderboard`).then((r) => r.json() as Promise<LeaderboardEntry[]>),
-      fetch(`${base}/api/leaderboard?game=checkers`).then((r) => r.json() as Promise<LeaderboardEntry[]>),
-    ])
-      .then(([chess, checkers]) => {
-        setLeaderboard(chess.slice(0, 10));
-        setCheckersLeaderboard(checkers.slice(0, 10));
-        setLeaderboardLoading(false);
-      })
-      .catch(() => setLeaderboardLoading(false));
+    let done = 0;
+    const finish = () => { if (++done === 2) setLeaderboardLoading(false); };
+
+    void fetch(`${base}/api/leaderboard`)
+      .then((r) => r.json() as Promise<LeaderboardEntry[]>)
+      .then((data) => setLeaderboard(Array.isArray(data) ? data.slice(0, 10) : []))
+      .catch(() => {})
+      .finally(finish);
+
+    void fetch(`${base}/api/leaderboard?game=checkers`)
+      .then((r) => r.json() as Promise<LeaderboardEntry[]>)
+      .then((data) => setCheckersLeaderboard(Array.isArray(data) ? data.slice(0, 10) : []))
+      .catch(() => {})
+      .finally(finish);
   }, []);
 
   const handleLogout = () => {

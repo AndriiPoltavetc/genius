@@ -39,6 +39,7 @@ export default function SettingsPanel() {
     setPieces(p);
     localStorage.setItem('genius_pieces', p);
     window.dispatchEvent(new Event('genius:settings-changed'));
+    window.dispatchEvent(new Event('pieceStyleChanged'));
   };
 
   return (
