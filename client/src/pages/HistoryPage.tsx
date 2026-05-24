@@ -7,6 +7,7 @@ import type { GameResult } from '../shared-types';
 
 interface GameHistoryItem {
   id: string;
+  gameType?: string;
   result: GameResult;
   resultReason: string;
   isAiGame: boolean;
@@ -124,18 +125,16 @@ export default function HistoryPage() {
                   ? myRatingAfter - myRatingBefore
                   : null;
 
-              return (
-                <Link
-                  key={game.id}
-                  to={`/game/${game.id}`}
-                  className="card flex items-center justify-between hover:border-primary-600 transition-colors"
-                >
+              const isCheckers = game.gameType === 'CHECKERS';
+              const cardClass = "card flex items-center justify-between hover:border-primary-600 transition-colors";
+              const inner = (
+                <>
                   <div>
                     <span className={`font-bold ${resultInfo.color}`}>{resultInfo.label}</span>
                     <span className="text-gray-400 text-sm ml-2">({game.resultReason})</span>
                     <p className="text-gray-400 text-sm mt-1">
                       {game.isAiGame ? '🤖 Проти ШІ' : `vs ${opponent?.username ?? '?'}`}
-                      {' · '}{game._count.moves} ходів
+                      {!isCheckers && <>{' · '}{game._count.moves} ходів</>}
                     </p>
                   </div>
                   <div className="text-right">
@@ -148,7 +147,12 @@ export default function HistoryPage() {
                       {new Date(game.startedAt).toLocaleDateString('uk-UA')}
                     </p>
                   </div>
-                </Link>
+                </>
+              );
+              return isCheckers ? (
+                <div key={game.id} className={cardClass}>{inner}</div>
+              ) : (
+                <Link key={game.id} to={`/game/${game.id}`} className={cardClass}>{inner}</Link>
               );
             })}
           </div>

@@ -39,12 +39,13 @@ model User {
 
 model Game {
   id                String       @id @default(uuid())
+  gameType          GameType     @default(CHESS)
   whitePlayerId     String?
   blackPlayerId     String?
   isAiGame          Boolean      @default(false)
   aiLevel           AiLevel?
-  pgn               String       @db.Text
-  finalFen          String
+  pgn               String?      @db.Text
+  finalFen          String?
   result            GameResult
   resultReason      ResultReason
   whiteRatingBefore Int?
@@ -94,6 +95,11 @@ model ChatMessage {
 
   @@index([gameId])
   @@map("chat_messages")
+}
+
+enum GameType {
+  CHESS
+  CHECKERS
 }
 
 enum AiLevel {

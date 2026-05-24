@@ -27,8 +27,19 @@ function emitState(io: CheckersServer, gameId: string) {
   io.to(`checkers:${gameId}`).emit('checkers:state', serializeBoard(state));
 }
 
-async function finalizeCheckersGame(state: CheckersGameState, winner: Color | 'draw'): Promise<void> {
+async function finalizeCheckersGame(
+  state: CheckersGameState,
+  winner: Color | 'draw',
+  endReason: 'resign' | 'disconnect' | 'normal' = 'normal',
+): Promise<void> {
   try {
+    const dbResult = winner === 'white' ? 'WHITE_WIN' : winner === 'black' ? 'BLACK_WIN' : 'DRAW';
+    const dbReason = endReason === 'resign' || endReason === 'disconnect'
+      ? 'RESIGN'
+      : winner === 'draw'
+      ? 'FIFTY_MOVE_RULE'
+      : 'CHECKMATE';
+
     if (state.isAiGame) {
       const humanColor: Color = state.players.white !== 'AI' ? 'white' : 'black';
       const humanId = humanColor === 'white' ? state.players.white : state.players.black;
@@ -36,53 +47,82 @@ async function finalizeCheckersGame(state: CheckersGameState, winner: Color | 'd
       const difficulty = state.difficulty ?? 'easy';
       const humanWon = winner === humanColor;
       const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-      await prisma.user.update({
-        where: { id: humanId },
-        data: {
-          [`checkersAi${cap(difficulty)}Played`]: { increment: 1 },
-          ...(humanWon ? { [`checkersAi${cap(difficulty)}Wins`]: { increment: 1 } } : {}),
-        },
-      });
-      return;
-    } else {
-      const whiteId = state.players.white;
-      const blackId = state.players.black;
-      if (!whiteId || !blackId) return;
-
-      const [whiteUser, blackUser] = await Promise.all([
-        prisma.user.findUnique({ where: { id: whiteId }, select: { checkersElo: true } }),
-        prisma.user.findUnique({ where: { id: blackId }, select: { checkersElo: true } }),
-      ]);
-      if (!whiteUser || !blackUser) return;
-
-      const elo = calculateElo(whiteUser.checkersElo, blackUser.checkersElo, winner);
       await Promise.all([
         prisma.user.update({
-          where: { id: whiteId },
+          where: { id: humanId },
           data: {
-            checkersElo: elo.whiteRatingAfter,
-            gamesPlayed: { increment: 1 },
-            ...(winner === 'white'
-              ? { gamesWon: { increment: 1 } }
-              : winner === 'draw'
-              ? { gamesDrawn: { increment: 1 } }
-              : { gamesLost: { increment: 1 } }),
+            [`checkersAi${cap(difficulty)}Played`]: { increment: 1 },
+            ...(humanWon ? { [`checkersAi${cap(difficulty)}Wins`]: { increment: 1 } } : {}),
           },
         }),
-        prisma.user.update({
-          where: { id: blackId },
+        prisma.game.create({
           data: {
-            checkersElo: elo.blackRatingAfter,
-            gamesPlayed: { increment: 1 },
-            ...(winner === 'black'
-              ? { gamesWon: { increment: 1 } }
-              : winner === 'draw'
-              ? { gamesDrawn: { increment: 1 } }
-              : { gamesLost: { increment: 1 } }),
+            gameType: 'CHECKERS',
+            isAiGame: true,
+            aiLevel: difficulty.toUpperCase() as 'EASY' | 'MEDIUM' | 'HARD',
+            whitePlayerId: humanColor === 'white' ? humanId : null,
+            blackPlayerId: humanColor === 'black' ? humanId : null,
+            result: dbResult,
+            resultReason: dbReason,
+            endedAt: new Date(),
           },
         }),
       ]);
+      return;
     }
+
+    const whiteId = state.players.white;
+    const blackId = state.players.black;
+    if (!whiteId || !blackId) return;
+
+    const [whiteUser, blackUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: whiteId }, select: { checkersElo: true } }),
+      prisma.user.findUnique({ where: { id: blackId }, select: { checkersElo: true } }),
+    ]);
+    if (!whiteUser || !blackUser) return;
+
+    const elo = calculateElo(whiteUser.checkersElo, blackUser.checkersElo, winner);
+    await Promise.all([
+      prisma.user.update({
+        where: { id: whiteId },
+        data: {
+          checkersElo: elo.whiteRatingAfter,
+          gamesPlayed: { increment: 1 },
+          ...(winner === 'white'
+            ? { gamesWon: { increment: 1 } }
+            : winner === 'draw'
+            ? { gamesDrawn: { increment: 1 } }
+            : { gamesLost: { increment: 1 } }),
+        },
+      }),
+      prisma.user.update({
+        where: { id: blackId },
+        data: {
+          checkersElo: elo.blackRatingAfter,
+          gamesPlayed: { increment: 1 },
+          ...(winner === 'black'
+            ? { gamesWon: { increment: 1 } }
+            : winner === 'draw'
+            ? { gamesDrawn: { increment: 1 } }
+            : { gamesLost: { increment: 1 } }),
+        },
+      }),
+      prisma.game.create({
+        data: {
+          gameType: 'CHECKERS',
+          isAiGame: false,
+          whitePlayerId: whiteId,
+          blackPlayerId: blackId,
+          result: dbResult,
+          resultReason: dbReason,
+          whiteRatingBefore: whiteUser.checkersElo,
+          blackRatingBefore: blackUser.checkersElo,
+          whiteRatingAfter: elo.whiteRatingAfter,
+          blackRatingAfter: elo.blackRatingAfter,
+          endedAt: new Date(),
+        },
+      }),
+    ]);
   } catch (err) {
     logger.error('finalizeCheckersGame error', { err, gameId: state.gameId });
   }
@@ -181,7 +221,7 @@ export function registerCheckersHandlers(io: CheckersServer, socket: CheckersSoc
     game.winner = winner;
 
     io.to(`checkers:${gameId}`).emit('checkers:over', { winner, reason: 'resign' });
-    void finalizeCheckersGame(game, winner);
+    void finalizeCheckersGame(game, winner, 'resign');
     checkersGames.delete(gameId);
   });
 
@@ -244,7 +284,7 @@ export function registerCheckersHandlers(io: CheckersServer, socket: CheckersSoc
       game.isOver = true;
       game.winner = winner;
       io.to(`checkers:${gameId}`).emit('checkers:over', { winner, reason: 'Суперник відключився' });
-      void finalizeCheckersGame(game, winner);
+      void finalizeCheckersGame(game, winner, 'disconnect');
       checkersGames.delete(gameId);
     }
   });

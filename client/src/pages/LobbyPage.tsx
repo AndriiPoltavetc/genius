@@ -528,8 +528,16 @@ export default function LobbyPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-white">{entry.rating}</td>
-                      <td className="px-4 py-3 text-right text-gray-400">{entry.gamesPlayed}</td>
-                      <td className="px-4 py-3 text-right text-gray-400">{entry.winRate}%</td>
+                      <td className="px-4 py-3 text-right text-gray-400">
+                        {leaderboardTab === 'checkers'
+                          ? (entry.checkersGamesPlayed ?? entry.gamesPlayed)
+                          : (entry.chessGamesPlayed ?? entry.gamesPlayed)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-400">
+                        {leaderboardTab === 'checkers'
+                          ? (entry.checkersWinRate ?? entry.winRate)
+                          : (entry.chessWinRate ?? entry.winRate)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>

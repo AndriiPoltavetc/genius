@@ -12,18 +12,6 @@ const PIECE_STYLES = [
   { id: 'classic', label: 'Класичний' },
 ];
 
-function PiecePreview({ styleId }: { styleId: string }) {
-  const stroke = styleId === 'classic';
-  const textStyle: React.CSSProperties = stroke
-    ? { WebkitTextStroke: '0.5px #555', paintOrder: 'stroke fill' as React.CSSProperties['paintOrder'] }
-    : {};
-  return (
-    <span className="flex items-center gap-1 select-none" style={{ fontSize: '20px', ...textStyle }}>
-      <span>♗</span>
-      <span>♝</span>
-    </span>
-  );
-}
 
 export default function SettingsPanel() {
   const [theme, setTheme] = useState(() => localStorage.getItem('genius_theme') ?? 'dark');
@@ -84,7 +72,6 @@ export default function SettingsPanel() {
                 className="accent-primary-500"
               />
               <span className="text-white text-sm group-hover:text-primary-300 transition-colors flex-1">{p.label}</span>
-              <PiecePreview styleId={p.id} />
             </label>
           ))}
         </div>

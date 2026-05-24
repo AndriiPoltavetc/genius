@@ -77,4 +77,8 @@ export interface LeaderboardEntry {
   gamesPlayed: number;
   gamesWon: number;
   winRate: number;
+  chessGamesPlayed?: number;
+  chessWinRate?: number;
+  checkersGamesPlayed?: number;
+  checkersWinRate?: number;
 }

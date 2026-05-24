@@ -1,0 +1,7 @@
+-- CreateEnum
+CREATE TYPE "GameType" AS ENUM ('CHESS', 'CHECKERS');
+
+-- AlterTable
+ALTER TABLE "games" ADD COLUMN "gameType" "GameType" NOT NULL DEFAULT 'CHESS';
+ALTER TABLE "games" ALTER COLUMN "pgn" DROP NOT NULL;
+ALTER TABLE "games" ALTER COLUMN "finalFen" DROP NOT NULL;
