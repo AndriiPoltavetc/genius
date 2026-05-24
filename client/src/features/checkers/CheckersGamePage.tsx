@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { getSocket } from '../game/socket';
 import { useAppSelector } from '../../app/hooks';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import SettingsPanel from '../../components/SettingsPanel';
 import CheckersBoard from './CheckersBoard';
 import type { Board, Color, CheckersMove } from './CheckersBoard';
 
@@ -34,6 +35,8 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
   const [playerColor, setPlayerColor] = useState<Color>('white');
   const [state, setState] = useState<SerializedBoardState | null>(null);
   const [showResignModal, setShowResignModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPanel, setShowPanel] = useState(true);
   const [isSearching, setIsSearching] = useState(mode === 'online');
   const [gameOver, setGameOver] = useState<{ winner: Color | 'draw'; reason?: string } | null>(null);
 
@@ -148,6 +151,25 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
 
   return (
     <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
+      {showSettings && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="w-72 bg-gray-900 border-l border-gray-800 h-full overflow-y-auto shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+              <h2 className="font-semibold text-white">Налаштування</h2>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+            </div>
+            <SettingsPanel />
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         isOpen={showResignModal}
         title="Здатися?"
@@ -192,6 +214,20 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={() => setShowPanel((p) => !p)}
+            className="p-1.5 rounded bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
+            title="Ходи"
+          >
+            📋
+          </button>
+          <button
+            onClick={() => setShowSettings((p) => !p)}
+            className="p-1.5 rounded bg-gray-800 hover:bg-gray-700 text-white text-sm transition-colors"
+            title="Налаштування"
+          >
+            ⚙️
+          </button>
+          <button
             onClick={() => setShowResignModal(true)}
             disabled={!!gameOver || state.isOver}
             className="px-3 py-1 rounded bg-red-800 hover:bg-red-700 text-white text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -232,7 +268,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
         </div>
 
         {/* Side panel: move history */}
-        <div className="flex flex-col bg-gray-900 border-l border-gray-800 flex-shrink-0 overflow-hidden" style={{ width: '200px' }}>
+        {showPanel && <div className="flex flex-col bg-gray-900 border-l border-gray-800 flex-shrink-0 overflow-hidden" style={{ width: '200px' }}>
           <div className="px-3 py-2 border-b border-gray-800 flex-shrink-0">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ходи</span>
           </div>
@@ -257,7 +293,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
             </table>
             <div ref={moveHistoryRef} />
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

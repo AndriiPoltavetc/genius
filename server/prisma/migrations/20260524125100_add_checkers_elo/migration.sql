@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN "checkersElo" INTEGER NOT NULL DEFAULT 1200;

@@ -3,20 +3,21 @@ import { prisma } from '../../config/database';
 
 export const leaderboardRoutes = Router();
 
-leaderboardRoutes.get('/', async (_req, res, next) => {
+leaderboardRoutes.get('/', async (req, res, next) => {
   try {
+    const isCheckers = req.query['game'] === 'checkers';
+
     const users = await prisma.user.findMany({
-      where: { gamesPlayed: { gte: 1 } },
-      orderBy: { rating: 'desc' },
+      where: isCheckers ? {} : { gamesPlayed: { gte: 1 } },
+      orderBy: isCheckers ? { checkersElo: 'desc' } : { rating: 'desc' },
       take: 100,
       select: {
         id: true,
         username: true,
         rating: true,
+        checkersElo: true,
         gamesPlayed: true,
         gamesWon: true,
-        gamesLost: true,
-        gamesDrawn: true,
       },
     });
 
@@ -24,7 +25,7 @@ leaderboardRoutes.get('/', async (_req, res, next) => {
       rank: i + 1,
       userId: u.id,
       username: u.username,
-      rating: u.rating,
+      rating: isCheckers ? u.checkersElo : u.rating,
       gamesPlayed: u.gamesPlayed,
       gamesWon: u.gamesWon,
       winRate: u.gamesPlayed > 0 ? Math.round((u.gamesWon / u.gamesPlayed) * 100) : 0,

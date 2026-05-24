@@ -48,14 +48,21 @@ export default function LobbyPage() {
   const [gameType, setGameType] = useState<'chess' | 'checkers'>('chess');
 
   // Leaderboard
+  const [leaderboardTab, setLeaderboardTab] = useState<'chess' | 'checkers'>('chess');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [checkersLeaderboard, setCheckersLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
 
   useEffect(() => {
-    void fetch(`${import.meta.env['VITE_API_URL'] as string}/api/leaderboard`)
-      .then((r) => r.json())
-      .then((data: LeaderboardEntry[]) => {
-        setLeaderboard(data.slice(0, 10));
+    const base = import.meta.env['VITE_API_URL'] as string;
+    setLeaderboardLoading(true);
+    void Promise.all([
+      fetch(`${base}/api/leaderboard`).then((r) => r.json() as Promise<LeaderboardEntry[]>),
+      fetch(`${base}/api/leaderboard?game=checkers`).then((r) => r.json() as Promise<LeaderboardEntry[]>),
+    ])
+      .then(([chess, checkers]) => {
+        setLeaderboard(chess.slice(0, 10));
+        setCheckersLeaderboard(checkers.slice(0, 10));
         setLeaderboardLoading(false);
       })
       .catch(() => setLeaderboardLoading(false));
@@ -159,7 +166,7 @@ export default function LobbyPage() {
                   onClick={() => { setGameType(type); setPendingAiLevel(null); }}
                   className={`flex-1 py-2 text-sm font-semibold transition-colors ${
                     gameType === type
-                      ? 'bg-primary-600 text-white'
+                      ? 'btn-primary'
                       : 'bg-gray-800 text-gray-400 hover:text-white'
                   }`}
                 >
@@ -190,18 +197,19 @@ export default function LobbyPage() {
                   <p className="text-gray-400 text-sm mb-4">Minimax Alpha-Beta. Не впливає на рейтинг.</p>
                   <div className="space-y-2">
                     {[
-                      { level: 'easy', label: '🟢 Легкий' },
-                      { level: 'medium', label: '🟡 Середній' },
-                      { level: 'hard', label: '🔴 Важкий' },
-                    ].map(({ level, label }) => (
+                      { level: 'easy', label: '🟢 Легкий', description: 'Випадкові помилки', depth: 1 },
+                      { level: 'medium', label: '🟡 Середній', description: 'Стандартний', depth: 3 },
+                      { level: 'hard', label: '🔴 Важкий', description: 'Сильний', depth: 5 },
+                    ].map(({ level, label, description, depth }) => (
                       <motion.button
                         key={level}
                         onClick={() => void navigate(`/checkers/ai?difficulty=${level}`)}
-                        className="btn-secondary w-full text-left"
+                        className="btn-secondary w-full text-left flex justify-between items-center"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        {label}
+                        <span>{label}</span>
+                        <span className="text-gray-400 text-xs">{description} · глибина {depth}</span>
                       </motion.button>
                     ))}
                   </div>
@@ -372,12 +380,6 @@ export default function LobbyPage() {
               >
                 📋 Моя історія
               </Link>
-              <button
-                onClick={() => document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-primary-400 hover:underline text-sm font-medium bg-transparent border-none cursor-pointer p-0"
-              >
-                🏆 Лідерборд
-              </button>
               <Link
                 to={`/profile/${user?.id ?? ''}`}
                 className="text-primary-400 hover:underline text-sm font-medium"
@@ -391,10 +393,25 @@ export default function LobbyPage() {
 
         {/* ── Leaderboard section ───────────────────────────────────── */}
         <div id="leaderboard" className="mt-8">
-          <h2 className="text-xl font-bold text-white mb-4">🏆 Лідерборд</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">🏆 Лідерборд</h2>
+            <div className="flex rounded-lg overflow-hidden border border-gray-700">
+              {(['chess', 'checkers'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setLeaderboardTab(tab)}
+                  className={`px-3 py-1 text-sm font-semibold transition-colors ${
+                    leaderboardTab === tab ? 'btn-primary' : 'bg-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab === 'chess' ? '♟ Шахи' : '🔴 Шашки'}
+                </button>
+              ))}
+            </div>
+          </div>
           {leaderboardLoading ? (
             <p className="text-gray-400">Завантаження...</p>
-          ) : leaderboard.length === 0 ? (
+          ) : (leaderboardTab === 'chess' ? leaderboard : checkersLeaderboard).length === 0 ? (
             <p className="text-gray-400">Немає даних.</p>
           ) : (
             <div className="card p-0 overflow-hidden">
@@ -409,7 +426,7 @@ export default function LobbyPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((entry) => (
+                  {(leaderboardTab === 'chess' ? leaderboard : checkersLeaderboard).map((entry) => (
                     <tr key={entry.userId} className="border-t border-gray-800 hover:bg-gray-800/50">
                       <td className="px-4 py-3 text-gray-400">
                         {entry.rank <= 3 ? (['🥇', '🥈', '🥉'] as const)[entry.rank - 1] : entry.rank}

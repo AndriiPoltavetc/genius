@@ -90,7 +90,7 @@ export default function CheckersBoard({
   );
 
   // Render board rows in correct orientation
-  const rows = playerColor === 'black' ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
+  const rows = playerColor === 'white' ? [...Array(8).keys()] : [...Array(8).keys()].reverse();
   const cols = playerColor === 'black' ? [...Array(8).keys()].reverse() : [...Array(8).keys()];
 
   return (
