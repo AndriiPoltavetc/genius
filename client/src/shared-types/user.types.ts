@@ -38,6 +38,11 @@ export interface UserPublic {
   checkersWins?: number;
   checkersLosses?: number;
   checkersDraws?: number;
+  checkersAiStats?: {
+    easy: AiLevelStats;
+    medium: AiLevelStats;
+    hard: AiLevelStats;
+  };
 }
 
 export interface AuthTokenPayload {

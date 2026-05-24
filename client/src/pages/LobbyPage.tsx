@@ -176,7 +176,9 @@ export default function LobbyPage() {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <p className="font-semibold text-white leading-tight" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username}</p>
-            <p className="text-sm font-bold text-primary-400 leading-tight">{user?.rating} ELO</p>
+            <p className="text-sm font-bold text-primary-400 leading-tight">
+              {gameType === 'checkers' ? (profile?.checkersElo ?? 1200) : profile?.rating} ELO
+            </p>
           </div>
           <button
             onClick={() => setShowSettings((p) => !p)}
@@ -423,6 +425,24 @@ export default function LobbyPage() {
                     { label: 'Легкий', stats: profile.aiStats.easy },
                     { label: 'Середній', stats: profile.aiStats.medium },
                     { label: 'Важкий', stats: profile.aiStats.hard },
+                  ] as const).map(({ label, stats }) => (
+                    <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
+                      <p className="text-xs text-gray-400">{label}</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{stats.played} ігор</p>
+                      <p className="text-xs text-gray-500">{stats.wins} пер.</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {gameType === 'checkers' && profile?.checkersAiStats && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Статистика проти ШІ</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { label: 'Легкий', stats: profile.checkersAiStats.easy },
+                    { label: 'Середній', stats: profile.checkersAiStats.medium },
+                    { label: 'Важкий', stats: profile.checkersAiStats.hard },
                   ] as const).map(({ label, stats }) => (
                     <div key={label} className="bg-gray-800 rounded-lg p-2 text-center">
                       <p className="text-xs text-gray-400">{label}</p>

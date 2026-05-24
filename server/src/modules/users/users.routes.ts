@@ -82,6 +82,7 @@ userRoutes.get('/:userId', async (req, res, next) => {
       }
     }
 
+    const emptyStats = { played: 0, wins: 0 };
     res.json({
       ...user,
       aiStats,
@@ -93,6 +94,7 @@ userRoutes.get('/:userId', async (req, res, next) => {
       checkersWins: 0,
       checkersLosses: 0,
       checkersDraws: 0,
+      checkersAiStats: { easy: emptyStats, medium: emptyStats, hard: emptyStats },
     });
   } catch (err) {
     next(err);

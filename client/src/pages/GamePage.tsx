@@ -234,22 +234,28 @@ export default function GamePage() {
             <Chessboard gameId={gameState.id} />
           </div>
 
-          {/* Side panel — horizontal slide on desktop, vertical expand on mobile */}
+          {/* Desktop: animated side panel */}
           <div
-            className="md:flex-shrink-0"
             style={{
+              width: showPanel ? '280px' : '0px',
+              transition: 'width 300ms ease',
               overflow: 'hidden',
               flexShrink: 0,
             }}
+            className="hidden md:block"
           >
+            <SidePanel
+              moves={gameState.moves}
+              activeTab={sidePanelTab}
+              onTabChange={setSidePanelTab}
+            />
+          </div>
+
+          {/* Mobile: panel slides in below board */}
+          {showPanel && (
             <div
-              style={{
-                width: showPanel ? '280px' : '0px',
-                transition: 'width 300ms ease',
-                overflow: 'hidden',
-                height: '100%',
-              }}
-              className="hidden md:block"
+              className="md:hidden w-full border-t border-gray-800 overflow-hidden"
+              style={{ maxHeight: '50vh' }}
             >
               <SidePanel
                 moves={gameState.moves}
@@ -257,16 +263,7 @@ export default function GamePage() {
                 onTabChange={setSidePanelTab}
               />
             </div>
-            {showPanel && (
-              <div className="md:hidden w-full max-h-40 overflow-hidden border-t border-gray-800">
-                <SidePanel
-                  moves={gameState.moves}
-                  activeTab={sidePanelTab}
-                  onTabChange={setSidePanelTab}
-                />
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     );
@@ -321,7 +318,7 @@ export default function GamePage() {
         </div>
 
         {/* Sidebar */}
-        <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80">
+        <div className="flex flex-col gap-3 p-3 md:p-4 border-t md:border-t-0 md:border-l border-gray-800 overflow-y-auto flex-shrink-0 md:w-80 max-h-[35vh] md:max-h-none">
           <MoveHistory moves={gameState.moves} />
           <ChatBox gameId={gameState.id} />
 

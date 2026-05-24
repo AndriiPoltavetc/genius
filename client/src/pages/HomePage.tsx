@@ -40,7 +40,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="mt-16 grid grid-cols-3 gap-6 text-center">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-center">
           {[
             { icon: '🤖', title: t('home.feature.ai'), desc: t('home.feature.aiDesc') },
             { icon: '⚡', title: t('home.feature.realtime'), desc: t('home.feature.realtimeDesc') },
