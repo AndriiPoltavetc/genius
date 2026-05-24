@@ -19,6 +19,7 @@ export interface UserPublic {
   id: string;
   username: string;
   rating: number;
+  checkersElo: number;
   gamesPlayed: number;
   gamesWon: number;
   gamesLost: number;

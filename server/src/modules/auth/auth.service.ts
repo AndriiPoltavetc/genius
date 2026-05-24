@@ -15,6 +15,7 @@ function toPublicUser(user: {
   email: string;
   username: string;
   rating: number;
+  checkersElo: number;
   gamesPlayed: number;
   gamesWon: number;
   gamesLost: number;
@@ -25,6 +26,7 @@ function toPublicUser(user: {
     id: user.id,
     username: user.username,
     rating: user.rating,
+    checkersElo: user.checkersElo,
     gamesPlayed: user.gamesPlayed,
     gamesWon: user.gamesWon,
     gamesLost: user.gamesLost,

@@ -138,7 +138,7 @@ export default function GamePage() {
             {gameEndResult.ratingDelta >= 0 ? '+' : ''}{gameEndResult.ratingDelta} ELO
           </p>
         )}
-        <button onClick={() => void navigate('/lobby')} className="btn-primary w-full">
+        <button onClick={() => void navigate('/lobby?game=chess')} className="btn-primary w-full">
           До лобі
         </button>
       </div>

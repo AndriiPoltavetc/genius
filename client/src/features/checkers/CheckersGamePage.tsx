@@ -111,7 +111,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
 
   const handleCancelSearch = () => {
     getSocket().emit('checkers:leaveQueue');
-    void navigate('/lobby');
+    void navigate('/lobby?game=checkers');
   };
 
   // ── Searching UI ───────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
                 : '😢 Поразка'}
             </p>
             {gameOver.reason && <p className="text-gray-400 text-sm mb-4">{gameOver.reason}</p>}
-            <button onClick={() => void navigate('/lobby')} className="btn-primary w-full">
+            <button onClick={() => void navigate('/lobby?game=checkers')} className="btn-primary w-full">
               До лобі
             </button>
           </div>

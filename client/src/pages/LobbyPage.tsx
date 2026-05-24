@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import SettingsPanel from '../components/SettingsPanel';
 import { motion } from 'framer-motion';
 
@@ -28,6 +28,7 @@ const TIME_OPTIONS: { label: string; seconds: number }[] = [
 export default function LobbyPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isSearching = useAppSelector((s) => s.game.isSearching);
   const user = useAppSelector((s) => s.auth.user);
 
@@ -45,10 +46,11 @@ export default function LobbyPage() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [pendingAiLevel, setPendingAiLevel] = useState<AiLevel | null>(null);
-  const [gameType, setGameType] = useState<'chess' | 'checkers'>('chess');
+  const initialGame = (searchParams.get('game') as 'chess' | 'checkers' | null) ?? 'chess';
+  const [gameType, setGameType] = useState<'chess' | 'checkers'>(initialGame);
 
   // Leaderboard
-  const [leaderboardTab, setLeaderboardTab] = useState<'chess' | 'checkers'>('chess');
+  const [leaderboardTab, setLeaderboardTab] = useState<'chess' | 'checkers'>(initialGame);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [checkersLeaderboard, setCheckersLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
@@ -323,7 +325,10 @@ export default function LobbyPage() {
                     ? new Date(profile.createdAt).toLocaleDateString('uk-UA')
                     : '—'}
                 </p>
-                <p className="text-primary-400 font-bold text-lg">{profile?.rating} ELO</p>
+                <p className="text-primary-400 font-bold text-lg">
+                  {gameType === 'checkers' ? (profile?.checkersElo ?? 1200) : profile?.rating} ELO
+                  {gameType === 'checkers' && <span className="text-xs font-normal text-gray-500 ml-1">(шашки)</span>}
+                </p>
               </div>
             </div>
 
@@ -357,7 +362,7 @@ export default function LobbyPage() {
             </div>
 
             {/* AI stats */}
-            {profile?.aiStats && (
+            {gameType === 'chess' && profile?.aiStats && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Статистика проти ШІ</p>
                 <div className="grid grid-cols-3 gap-2">

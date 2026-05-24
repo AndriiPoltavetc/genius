@@ -44,15 +44,6 @@ function getMoveHighlight(theme: string): string {
   );
 }
 
-function getCaptureColor(theme: string): string {
-  return (
-    {
-      dark: 'rgba(150,150,150,0.9)',
-      light: 'rgba(200,0,0,0.8)',
-      classic: 'rgba(0,120,0,0.8)',
-    }[theme] ?? 'rgba(220,30,30,0.75)'
-  );
-}
 
 export default function CheckersBoard({
   board,
@@ -112,11 +103,15 @@ export default function CheckersBoard({
   const reachable = new Map<string, ValidMove>();
   const capturable = new Set<string>();
 
+  // Highlight ALL capturable enemy pieces (not just from selected piece)
+  for (const m of validMoves) {
+    for (const [cr, cc] of m.captures) capturable.add(`${cr},${cc}`);
+  }
+
   if (selected) {
     for (const m of validMoves) {
       if (m.from[0] === selected[0] && m.from[1] === selected[1]) {
         reachable.set(`${m.to[0]},${m.to[1]}`, m);
-        for (const [cr, cc] of m.captures) capturable.add(`${cr},${cc}`);
       }
     }
   }
@@ -219,16 +214,17 @@ export default function CheckersBoard({
                 />
               )}
 
-              {/* Capture ring on enemy pieces */}
+              {/* Capture highlight on enemy pieces */}
               {isCaptureSq && piece && (
                 <div
                   style={{
                     position: 'absolute',
-                    inset: '4px',
-                    border: `3px solid ${getCaptureColor(currentTheme)}`,
-                    borderRadius: '50%',
+                    inset: 0,
+                    outline: '4px solid rgba(220, 30, 30, 0.95)',
+                    outlineOffset: '-4px',
+                    backgroundColor: 'rgba(220, 30, 30, 0.15)',
                     pointerEvents: 'none',
-                    zIndex: 2,
+                    zIndex: 10,
                   }}
                 />
               )}

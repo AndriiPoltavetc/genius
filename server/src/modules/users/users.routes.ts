@@ -40,6 +40,7 @@ userRoutes.get('/:userId', async (req, res, next) => {
           id: true,
           username: true,
           rating: true,
+          checkersElo: true,
           gamesPlayed: true,
           gamesWon: true,
           gamesLost: true,
