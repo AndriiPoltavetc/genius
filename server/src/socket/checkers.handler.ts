@@ -1,7 +1,7 @@
 import type { Server, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { SocketData } from '@genius/shared';
+import type { ClientToServerEvents, ServerToClientEvents, SocketData } from '@genius/shared';
 import {
   createCheckersGame,
   applyCheckersMove,
@@ -9,26 +9,87 @@ import {
   serializeBoard,
   checkersGames,
   type CheckersDifficulty,
+  type CheckersGameState,
 } from '../checkers/checkers.service';
 import type { Color, CheckersMove } from '../checkers/checkers.engine';
-import { getValidMoves } from '../checkers/checkers.engine';
 import { logger } from '../utils/logger';
-import { redis } from '../config/redis';
+import { prisma } from '../config/database';
+import { calculateElo } from '../modules/ratings/elo.service';
 
-type AnyServer = Server<any, any, any, SocketData>;
-type AnySocket = Socket<any, any, any, SocketData>;
+type CheckersServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
+type CheckersSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
-// Matchmaking queue: userId → { socket, rating, joinedAt }
-const checkersQueue = new Map<string, { socket: AnySocket; rating: number; joinedAt: number }>();
+const checkersQueue = new Map<string, { socket: CheckersSocket; rating: number; joinedAt: number }>();
 
-function emitState(io: AnyServer, gameId: string) {
+function emitState(io: CheckersServer, gameId: string) {
   const state = checkersGames.get(gameId);
   if (!state) return;
   io.to(`checkers:${gameId}`).emit('checkers:state', serializeBoard(state));
 }
 
-export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void {
-  const { userId, username, rating } = socket.data;
+async function finalizeCheckersGame(state: CheckersGameState, winner: Color | 'draw'): Promise<void> {
+  try {
+    if (state.isAiGame) {
+      const humanId = state.players.white !== 'AI' ? state.players.white : state.players.black;
+      if (!humanId) return;
+      const humanColor: Color = state.players.white !== 'AI' ? 'white' : 'black';
+      await prisma.user.update({
+        where: { id: humanId },
+        data: {
+          gamesPlayed: { increment: 1 },
+          ...(winner === humanColor
+            ? { gamesWon: { increment: 1 } }
+            : winner === 'draw'
+            ? { gamesDrawn: { increment: 1 } }
+            : { gamesLost: { increment: 1 } }),
+        },
+      });
+    } else {
+      const whiteId = state.players.white;
+      const blackId = state.players.black;
+      if (!whiteId || !blackId) return;
+
+      const [whiteUser, blackUser] = await Promise.all([
+        prisma.user.findUnique({ where: { id: whiteId }, select: { checkersElo: true } }),
+        prisma.user.findUnique({ where: { id: blackId }, select: { checkersElo: true } }),
+      ]);
+      if (!whiteUser || !blackUser) return;
+
+      const elo = calculateElo(whiteUser.checkersElo, blackUser.checkersElo, winner);
+      await Promise.all([
+        prisma.user.update({
+          where: { id: whiteId },
+          data: {
+            checkersElo: elo.whiteRatingAfter,
+            gamesPlayed: { increment: 1 },
+            ...(winner === 'white'
+              ? { gamesWon: { increment: 1 } }
+              : winner === 'draw'
+              ? { gamesDrawn: { increment: 1 } }
+              : { gamesLost: { increment: 1 } }),
+          },
+        }),
+        prisma.user.update({
+          where: { id: blackId },
+          data: {
+            checkersElo: elo.blackRatingAfter,
+            gamesPlayed: { increment: 1 },
+            ...(winner === 'black'
+              ? { gamesWon: { increment: 1 } }
+              : winner === 'draw'
+              ? { gamesDrawn: { increment: 1 } }
+              : { gamesLost: { increment: 1 } }),
+          },
+        }),
+      ]);
+    }
+  } catch (err) {
+    logger.error('finalizeCheckersGame error', { err, gameId: state.gameId });
+  }
+}
+
+export function registerCheckersHandlers(io: CheckersServer, socket: CheckersSocket): void {
+  const { userId, rating } = socket.data;
 
   // ── Start AI game ──────────────────────────────────────────────────────
   socket.on('checkers:startAi', async ({ difficulty, color }: { difficulty: CheckersDifficulty; color: Color }) => {
@@ -46,12 +107,14 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
 
       logger.info('Checkers AI game started', { gameId, userId, difficulty, humanColor });
 
-      // If AI goes first (human chose black)
       if (state.turn !== humanColor && !state.isOver) {
-        void computeAiMove(gameId, (updatedState, aiMove) => {
+        void computeAiMove(gameId, (updatedState) => {
           emitState(io, gameId);
           if (updatedState.isOver) {
-            io.to(`checkers:${gameId}`).emit('checkers:over', { winner: updatedState.winner });
+            const w = updatedState.winner!;
+            io.to(`checkers:${gameId}`).emit('checkers:over', { winner: w });
+            void finalizeCheckersGame(updatedState, w);
+            checkersGames.delete(gameId);
           }
         });
       }
@@ -66,7 +129,6 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
       const game = checkersGames.get(gameId);
       if (!game || game.isOver) return;
 
-      // Verify it's the player's turn
       const isWhite = game.players.white === userId;
       const isBlack = game.players.black === userId;
       if (!isWhite && !isBlack) return;
@@ -82,16 +144,21 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
       emitState(io, gameId);
 
       if (updatedState.isOver) {
-        io.to(`checkers:${gameId}`).emit('checkers:over', { winner: updatedState.winner });
+        const w = updatedState.winner!;
+        io.to(`checkers:${gameId}`).emit('checkers:over', { winner: w });
+        void finalizeCheckersGame(updatedState, w);
+        checkersGames.delete(gameId);
         return;
       }
 
-      // AI turn
       if (updatedState.isAiGame) {
         void computeAiMove(gameId, (aiState) => {
           emitState(io, gameId);
           if (aiState.isOver) {
-            io.to(`checkers:${gameId}`).emit('checkers:over', { winner: aiState.winner });
+            const w = aiState.winner!;
+            io.to(`checkers:${gameId}`).emit('checkers:over', { winner: w });
+            void finalizeCheckersGame(aiState, w);
+            checkersGames.delete(gameId);
           }
         });
       }
@@ -106,11 +173,15 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
     if (!game || game.isOver) return;
 
     const isWhite = game.players.white === userId;
+    const isBlack = game.players.black === userId;
+    if (!isWhite && !isBlack) return;
+
     const winner: Color = isWhite ? 'black' : 'white';
     game.isOver = true;
     game.winner = winner;
 
     io.to(`checkers:${gameId}`).emit('checkers:over', { winner, reason: 'resign' });
+    void finalizeCheckersGame(game, winner);
     checkersGames.delete(gameId);
   });
 
@@ -119,7 +190,6 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
     checkersQueue.set(userId, { socket, rating, joinedAt: Date.now() });
     socket.emit('checkers:queueJoined');
 
-    // Try to find a match
     if (checkersQueue.size >= 2) {
       const entries = [...checkersQueue.entries()];
       const [idA, playerA] = entries[0]!;
@@ -134,18 +204,18 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
 
       const state = createCheckersGame(gameId, idA, colorA, false, undefined, idB);
 
-      const emitStart = (s: AnySocket, pid: string, col: Color) => {
+      const emitStart = (s: CheckersSocket, col: Color, oppId: string) => {
         void s.join(`checkers:${gameId}`);
         s.emit('checkers:started', {
           gameId,
           playerColor: col,
           state: serializeBoard(state),
-          opponent: { id: colorA === col ? idB : idA },
+          opponent: { id: oppId },
         });
       };
 
-      emitStart(playerA.socket, idA, colorA);
-      emitStart(playerB.socket, idB, colorB);
+      emitStart(playerA.socket, colorA, idB);
+      emitStart(playerB.socket, colorB, idA);
 
       logger.info('Checkers online game started', { gameId, white: idA, black: idB });
     }
@@ -154,5 +224,28 @@ export function registerCheckersHandlers(io: AnyServer, socket: AnySocket): void
   socket.on('checkers:leaveQueue', () => {
     checkersQueue.delete(userId);
     socket.emit('checkers:queueLeft');
+  });
+
+  // ── Disconnect cleanup ────────────────────────────────────────────────
+  socket.on('disconnect', async () => {
+    checkersQueue.delete(userId);
+
+    for (const [gameId, game] of checkersGames.entries()) {
+      const isWhite = game.players.white === userId;
+      const isBlack = game.players.black === userId;
+      if (!isWhite && !isBlack) continue;
+
+      if (game.isOver || game.isAiGame) {
+        checkersGames.delete(gameId);
+        continue;
+      }
+
+      const winner: Color = isWhite ? 'black' : 'white';
+      game.isOver = true;
+      game.winner = winner;
+      io.to(`checkers:${gameId}`).emit('checkers:over', { winner, reason: 'Суперник відключився' });
+      void finalizeCheckersGame(game, winner);
+      checkersGames.delete(gameId);
+    }
   });
 }

@@ -8,17 +8,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal';
 import SettingsPanel from '../../components/SettingsPanel';
 import CheckersBoard from './CheckersBoard';
 import type { Board, Color, CheckersMove } from './CheckersBoard';
-
-interface SerializedBoardState {
-  gameId: string;
-  board: Board;
-  turn: Color;
-  moveCount: number;
-  isOver: boolean;
-  winner: Color | 'draw' | null;
-  lastMove: CheckersMove | null;
-  validMoves: CheckersMove[];
-}
+import type { CheckersBoardState } from '../../shared-types';
 
 interface CheckersGamePageProps {
   mode: 'ai' | 'online';
@@ -33,7 +23,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
 
   const [gameId, setGameId] = useState<string | null>(null);
   const [playerColor, setPlayerColor] = useState<Color>('white');
-  const [state, setState] = useState<SerializedBoardState | null>(null);
+  const [state, setState] = useState<CheckersBoardState | null>(null);
   const [showResignModal, setShowResignModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
@@ -52,19 +42,19 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
     const socket = getSocket();
 
     if (mode === 'ai') {
-      socket.emit('checkers:startAi' as any, { difficulty, color: 'white' });
+      socket.emit('checkers:startAi', { difficulty, color: 'white' });
     } else {
-      socket.emit('checkers:joinQueue' as any);
+      socket.emit('checkers:joinQueue');
     }
 
-    socket.on('checkers:started' as any, (data: { gameId: string; playerColor: Color; state: SerializedBoardState }) => {
+    socket.on('checkers:started', (data) => {
       setGameId(data.gameId);
-      setPlayerColor(data.playerColor);
+      setPlayerColor(data.playerColor as Color);
       setState(data.state);
       setIsSearching(false);
     });
 
-    socket.on('checkers:state' as any, (data: SerializedBoardState) => {
+    socket.on('checkers:state', (data) => {
       setState((prev) => {
         if (prev && data.lastMove) {
           const color: Color = data.moveCount % 2 === 0 ? 'black' : 'white';
@@ -78,24 +68,29 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
       });
     });
 
-    socket.on('checkers:over' as any, (data: { winner: Color | 'draw'; reason?: string }) => {
-      setGameOver(data);
+    socket.on('checkers:over', (data) => {
+      setGameOver({ winner: data.winner as Color | 'draw', reason: data.reason });
     });
 
-    socket.on('checkers:error' as any, (data: { message: string }) => {
+    socket.on('checkers:error', (data) => {
       console.warn('Checkers error:', data.message);
     });
 
-    socket.on('checkers:queueJoined' as any, () => {
+    socket.on('checkers:queueJoined', () => {
       setIsSearching(true);
     });
 
+    socket.on('checkers:opponentDisconnected', () => {
+      setGameOver({ winner: playerColor, reason: 'Суперник відключився' });
+    });
+
     return () => {
-      socket.off('checkers:started' as any);
-      socket.off('checkers:state' as any);
-      socket.off('checkers:over' as any);
-      socket.off('checkers:error' as any);
-      socket.off('checkers:queueJoined' as any);
+      socket.off('checkers:started');
+      socket.off('checkers:state');
+      socket.off('checkers:over');
+      socket.off('checkers:error');
+      socket.off('checkers:queueJoined');
+      socket.off('checkers:opponentDisconnected');
     };
   }, [mode, difficulty]);
 
@@ -103,7 +98,7 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
     (move: CheckersMove) => {
       if (!gameId) return;
       const socket = getSocket();
-      socket.emit('checkers:move' as any, { gameId, move });
+      socket.emit('checkers:move', { gameId, move });
     },
     [gameId],
   );
@@ -111,11 +106,11 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
   const handleResign = () => {
     if (!gameId) return;
     setShowResignModal(false);
-    getSocket().emit('checkers:resign' as any, { gameId });
+    getSocket().emit('checkers:resign', { gameId });
   };
 
   const handleCancelSearch = () => {
-    getSocket().emit('checkers:leaveQueue' as any);
+    getSocket().emit('checkers:leaveQueue');
     void navigate('/lobby');
   };
 
@@ -206,7 +201,8 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
       {/* TopBar */}
       <div className="flex items-center px-3 py-2 bg-gray-900 border-b border-gray-800 flex-shrink-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${playerColor === 'white' ? 'bg-gray-900 border-2 border-gray-400' : 'bg-gray-800'}`}
+          <div
+            className="w-3 h-3 rounded-full flex-shrink-0"
             style={{ backgroundColor: playerColor === 'black' ? '#1a1a1a' : '#f0f0f0', border: '2px solid #888' }}
           />
           <span className="font-semibold text-white text-sm truncate">{opponentLabel}</span>
@@ -257,9 +253,9 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
           </div>
 
           <CheckersBoard
-            board={state.board}
+            board={state.board as Board}
             playerColor={playerColor}
-            turn={state.turn}
+            turn={state.turn as Color}
             validMoves={state.isOver || !!gameOver ? [] : state.validMoves}
             lastMove={state.lastMove}
             isGameOver={state.isOver || !!gameOver}
@@ -268,32 +264,34 @@ export default function CheckersGamePage({ mode }: CheckersGamePageProps) {
         </div>
 
         {/* Side panel: move history */}
-        {showPanel && <div className="flex flex-col bg-gray-900 border-l border-gray-800 flex-shrink-0 overflow-hidden" style={{ width: '200px' }}>
-          <div className="px-3 py-2 border-b border-gray-800 flex-shrink-0">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ходи</span>
+        {showPanel && (
+          <div className="flex flex-col bg-gray-900 border-l border-gray-800 flex-shrink-0 overflow-hidden" style={{ width: '200px' }}>
+            <div className="px-3 py-2 border-b border-gray-800 flex-shrink-0">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ходи</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
+              {moveHistory.length === 0 && (
+                <p className="text-gray-500 text-center mt-4">Ходів ще немає</p>
+              )}
+              <table className="w-full">
+                <tbody>
+                  {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
+                    const white = moveHistory[i * 2];
+                    const black = moveHistory[i * 2 + 1];
+                    return (
+                      <tr key={i} className="hover:bg-gray-800">
+                        <td className="text-gray-500 pr-1 text-right w-6">{i + 1}.</td>
+                        <td className="text-white px-1 py-0.5">{white ? `${white.from}→${white.to}` : ''}</td>
+                        <td className="text-white px-1 py-0.5">{black ? `${black.from}→${black.to}` : ''}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div ref={moveHistoryRef} />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
-            {moveHistory.length === 0 && (
-              <p className="text-gray-500 text-center mt-4">Ходів ще немає</p>
-            )}
-            <table className="w-full">
-              <tbody>
-                {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
-                  const white = moveHistory[i * 2];
-                  const black = moveHistory[i * 2 + 1];
-                  return (
-                    <tr key={i} className="hover:bg-gray-800">
-                      <td className="text-gray-500 pr-1 text-right w-6">{i + 1}.</td>
-                      <td className="text-white px-1 py-0.5">{white ? `${white.from}→${white.to}` : ''}</td>
-                      <td className="text-white px-1 py-0.5">{black ? `${black.from}→${black.to}` : ''}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div ref={moveHistoryRef} />
-          </div>
-        </div>}
+        )}
       </div>
     </div>
   );

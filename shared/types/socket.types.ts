@@ -1,4 +1,12 @@
 import type { AiLevel, GameState, GameResult, ResultReason, Move } from './game.types';
+import type {
+  CheckersDifficulty,
+  CheckersPieceColor,
+  CheckersMovePayload,
+  CheckersBoardState,
+  CheckersStartedPayload,
+  CheckersOverPayload,
+} from './checkers.types';
 
 // Events sent from Client → Server
 export interface ClientToServerEvents {
@@ -12,6 +20,12 @@ export interface ClientToServerEvents {
   drawAccept: () => void;
   drawDecline: () => void;
   chatMessage: (payload: ChatMessagePayload) => void;
+  // Checkers
+  'checkers:startAi': (payload: { difficulty: CheckersDifficulty; color: CheckersPieceColor }) => void;
+  'checkers:joinQueue': () => void;
+  'checkers:leaveQueue': () => void;
+  'checkers:move': (payload: { gameId: string; move: CheckersMovePayload }) => void;
+  'checkers:resign': (payload: { gameId: string }) => void;
 }
 
 // Events sent from Server → Client
@@ -29,6 +43,14 @@ export interface ServerToClientEvents {
   queueLeft: () => void;
   error: (payload: ErrorPayload) => void;
   syncTime: (payload: SyncTimePayload) => void;
+  // Checkers
+  'checkers:started': (payload: CheckersStartedPayload) => void;
+  'checkers:state': (data: CheckersBoardState) => void;
+  'checkers:over': (data: CheckersOverPayload) => void;
+  'checkers:error': (data: { message: string }) => void;
+  'checkers:queueJoined': () => void;
+  'checkers:queueLeft': () => void;
+  'checkers:opponentDisconnected': () => void;
 }
 
 // Payloads

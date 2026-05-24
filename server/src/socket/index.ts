@@ -10,6 +10,7 @@ import { registerMatchmakingHandlers } from './handlers/matchmaking.handler';
 import { registerCheckersHandlers } from './checkers.handler';
 import { logger } from '../utils/logger';
 import { removeFromQueue } from '../modules/matchmaking/matchmaking.service';
+import { pendingGameReady } from './gameReadyStore';
 
 export function initSocketIO(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(
@@ -36,6 +37,13 @@ export function initSocketIO(httpServer: HttpServer) {
     socket.on('disconnect', async (reason) => {
       logger.info('Socket disconnected', { userId, reason });
       await removeFromQueue(userId);
+
+      for (const [key, pending] of pendingGameReady.entries()) {
+        if (key.endsWith(`:${userId}`)) {
+          clearTimeout(pending.timer);
+          pendingGameReady.delete(key);
+        }
+      }
     });
   });
 
