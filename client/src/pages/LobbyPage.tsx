@@ -312,7 +312,7 @@ export default function LobbyPage() {
 
             {/* AI Game */}
             <div className="card">
-              <h2 className="text-xl font-bold text-white mb-2">🤖 Гра проти ШІ</h2>
+              <h2 className="text-xl font-bold text-white mb-2">🤖 Шахи проти ШІ</h2>
               <p className="text-gray-400 text-sm mb-4">
                 Minimax + Alpha-Beta, три рівні. Не впливає на рейтинг.
               </p>
